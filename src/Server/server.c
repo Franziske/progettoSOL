@@ -19,18 +19,6 @@
 #define SOCKNAME "./mysock"
 #define N 26
 
-//Struttura contenente le info necessarie al server relative ad una richiesta
-typedef struct serverRequest_t
-{
-   Operation op;               // quale operazione è stata richiesta
-   size_t dim;                 // dimensione file
-   size_t nameLenght;          // lunghezza del nome con cui memorizzare il file
-   char *fileName;             //nome del file associato alla richiesta
-   int client;                 //fd client che l'ha richiesta
-   int flags;                
-   ServerRequest *next; //puntatore alla richiesta successiva NULL se non ce ne sono
-} ServerRequest;
-
 
 typedef struct {
     sigset_t     *set;           /// set dei segnali da gestire (mascherati)

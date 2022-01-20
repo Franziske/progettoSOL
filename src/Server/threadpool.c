@@ -1,13 +1,13 @@
 #include "threadpool.h"
 
 
-void addRequest(ServerRequest** list, Request* newReq){
+void addRequest(ServerRequest** list, ServerRequest* newReq){
 
     if( (*list) == NULL){
         *list = newReq;
     }
     else{
-        Request* aux = (*list);
+        ServerRequest* aux = (*list);
 
         while (aux->next != NULL){
             aux = aux->next;
