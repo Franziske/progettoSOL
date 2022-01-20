@@ -1,7 +1,7 @@
 #include "threadpool.h"
 
 
-/*void addRequest(ServerRequest** list, Request* newReq){
+void addRequest(ServerRequest** list, Request* newReq){
 
     if( (*list) == NULL){
         *list = newReq;
@@ -15,7 +15,7 @@
         aux->next = newReq;
     }
 
-}*/
+}
 
 
 void freeRequests(ServerRequest** list){
