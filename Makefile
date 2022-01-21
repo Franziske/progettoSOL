@@ -17,6 +17,10 @@ ini:
 api:
 	$(CC) $(CFLAGS) -c $(LIB)/api/api.c -o $(OBJ)/api.o
 
+threadpool:
+	$(CC) $(CFLAGS) -c $(SRC)/Server/threadpool.c -o $(OBJ)/threadpool.o
+
+
 utils:
 	$(CC) $(CFLAGS) $(DFT) -c $(LIB)/utils/utils.c -o $(OBJ)/utils.o
 
@@ -24,7 +28,7 @@ client: utils api
 	$(CC) $(CFLAGS) $(DFT) -c $(SRC)/Client/client.c -o $(OBJ)/client.o
 	$(CC) $(CFLAGS) $(OBJ)/utils.o $(OBJ)/api.o $(OBJ)/client.o -o $(BIN)/client.out
 
-server: ini
+server: ini utils threadpool
 	$(CC) $(CFLAGS) -c $(SRC)/Server/server.c -o $(OBJ)/server.o
 	$(CC) $(CFLAGS) $(OBJ)/ini.o $(OBJ)/server.o -o $(BIN)/server.out
 
