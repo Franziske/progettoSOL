@@ -244,9 +244,9 @@ sigset_t mask;
    CHECKERRSC(err, -1, "Errore listen: ");
 
 
-   threadpool* pool = NULL;
+ Threadpool* pool = NULL;
 
-    pool = createThreadPool(n, n); 
+    pool = createThreadPool(n); 
 
     CHECKERRE(pool, NULL, "Errore nella creazione del pool di thread");
     
@@ -260,31 +260,31 @@ sigset_t mask;
     // tengo traccia del file descriptor con id piu' grande
     int fdmax = (listenfd > signal_pipe[0]) ? listenfd : signal_pipe[0];
 
-    volatile long termina = 0;
+    volatile int termina = 0;
     while(!termina) {
 	// copio il set nella variabile temporanea per la select
 	tmpset = set;
 	err = select(fdmax+1, &tmpset, NULL, NULL, NULL);
-   CHECKERRSC(err,-1, "Errore select: ");
+    CHECKERRSC(err,-1, "Errore select: ");
 
 	// cerchiamo di capire da quale fd abbiamo ricevuto una richiesta
 	for(int i=0; i <= fdmax; i++) {
 	    if (FD_ISSET(i, &tmpset)) {
-		long connfd;
+		int connfd;
 
 		if (i == listenfd) { // e' una nuova richiesta di connessione 
 		    connfd = accept(listenfd, (struct sockaddr*)NULL ,NULL);
           CHECKERRSC(connfd, -1, "Errore accept");
 
-		    /*long* args = malloc(2*sizeof(long));
+		    /*int* args = malloc(2*sizeof(int));
 		    if (!args) {
 		      perror("FATAL ERROR 'malloc'");
 		      goto _exit;
 		    }
 		    args[0] = connfd;
-		    args[1] = (long)&termina;
+		    args[1] = (int)&termina;
 		    
-		    int r =addToThreadPool(pool, threadF, (void*)args);
+		    int r =addToQueue(pool, args);
 		    if (r==0) continue; // aggiunto con successo
 		    if (r<0) { // errore interno
 			fprintf(stderr, "FATAL ERROR, adding to the thread pool\n");
@@ -297,6 +297,7 @@ sigset_t mask;
 		}
 		if (i == signal_pipe[0]) {
 		    // ricevuto un segnale, esco ed inizio il protocollo di terminazione
+            //controlla il tipo di terminazione
 		    termina = 1;
 		    break;
 		}

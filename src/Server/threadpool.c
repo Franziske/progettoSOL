@@ -1,89 +1,125 @@
 #include "threadpool.h"
 
 
-void addRequest(ServerRequest** list, ServerRequest* newReq){
+static void* workerFun(void *threadpool){
 
-    if( (*list) == NULL){
-        *list = newReq;
-    }
-    else{
-        ServerRequest* aux = (*list);
-
-        while (aux->next != NULL){
-            aux = aux->next;
-        }
-        aux->next = newReq;
-    }
-
+    
 }
 
+void addRequest(Client **list, Client *newReq)
+{
 
-void freeRequests(ServerRequest** list){
+    if ((*list) == NULL)
+    {
+        *list = newReq;
+    }
+    else
+    {
+        Client* aux = (*list);
 
-    ServerRequest*aux;
-    while(*list != NULL){
+        while (aux->nextC != NULL)
+        {
+            aux = aux->nextC;
+        }
+        aux->nextC = newReq;
+    }
+}
+
+void freeRequests(Client **list)
+{
+
+    Client *aux;
+    while (*list != NULL)
+    {
         aux = *list;
-        *list = aux->next;
-        free(aux->fileName);
+        *list = aux->nextC;
         free(aux);
     }
 }
 
+Threadpool *createThreadPool(int nWorker)
+{
+    if (nWorker <= 0)
+    {
+        errno = EINVAL;
+        return NULL;
+    }
 
-threadpool* createThreadPool(int nWorker, int dimQueue){
-    if(nWorker <= 0 || dimQueue < 0) {
-	errno = EINVAL;
+    Threadpool *pool = malloc(sizeof(Threadpool));
+    if (pool == NULL)
+        return NULL;
+
+    // condizioni iniziali
+    pool->nWorker = nWorker;
+    pool->head = pool->tail = NULL;
+    pool->count = 0;
+
+    /* Allocate thread and task queue */
+    pool->threads = malloc(sizeof(pthread_t) * nWorker);
+    if (pool->threads == NULL)
+    {
+        free(pool);
         return NULL;
     }
     
-    threadpool *pool = (threadpool *)malloc(sizeof(threadpool));
-    if (pool == NULL) return NULL;
+    pool->queue = NULL;
 
-    // condizioni iniziali
-    pool->nWorker   = 0;
-    pool->taskonthefly = 0;
-    pool->queueMax = dimQueue;
-    pool->head = pool->tail = pool->count = 0;
-    pool->exiting = 0;
-
-    /* Allocate thread and task queue */
-    pool->threads = (pthread_t *)malloc(sizeof(pthread_t) * nWorker);
-    if (pool->threads == NULL) {
-	free(pool);
-	return NULL;
-    }
-    pool->queue = (ServerRequest *)malloc(sizeof(ServerRequest) * abs(pool->queueMax));
-    if (pool->queue == NULL) {
-	free(pool->threads);
-	free(pool);
-	return NULL;
-    }
     if ((pthread_mutex_init(&(pool->lock), NULL) != 0) ||
-	(pthread_cond_init(&(pool->cond), NULL) != 0))  {
-	free(pool->threads);
-	free(pool->queue);
-	free(pool);
-	return NULL;
+        (pthread_cond_init(&(pool->cond), NULL) != 0))
+    {
+        free(pool->threads);
+        free(pool->queue);
+        free(pool);
+        return NULL;
     }
-    for(int i = 0; i < nWorker; i++) {
-        if(pthread_create(&(pool->threads[i]), NULL,
-                          workerFun, (void*)pool) != 0) {
-	    /* errore fatale, libero tutto forzando l'uscita dei threads */
+    for (int i = 0; i < nWorker; i++)
+    {
+        if (pthread_create(&(pool->threads[i]), NULL,
+                           workerFun, (void *)pool) != 0)
+        {
+            /* errore fatale, libero tutto forzando l'uscita dei threads */
             destroyThreadPool(pool, 1);
-	    errno = EFAULT;
+            errno = EFAULT;
             return NULL;
         }
-        pool->nWorker++;
+        //pool->nWorker++;
     }
     return pool;
-
 }
 
-int addRequestToPool(threadpool *pool, ServerRequest* req){
+int addToQueue(Threadpool *pool, int* args){
 
+     if (pool == NULL || args == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    LOCK_RETURN(&(pool->lock), -1);
+    /*if (pool->exiting)
+    {
+        UNLOCK_RETURN(&(pool->lock), -1);
+        return 1; // esco con valore errore
+    }*/
+
+    Client* req = malloc(sizeof(Client));
+    req->fdC = args[1];
+    req->nextC = NULL;
+
+    addRequest(&(pool->queue), req);
+
+    int r;
+    if ((r = pthread_cond_signal(&(pool->cond))) != 0)
+    {
+        UNLOCK_RETURN(&(pool->lock), -1);
+        errno = r;
+        return -1;
+    }
+
+    UNLOCK_RETURN(&(pool->lock), -1);
+    return 0;
 
 }
-int destroyThreadPool(threadpool *pool, int force){
-
-
+int destroyThreadPool(Threadpool *pool, int force)
+{
 }

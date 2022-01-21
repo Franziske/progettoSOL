@@ -49,8 +49,6 @@ int sendRequest(serverOperation op, int dim, const char *name, int flags)
    printf("inviato : %ld\n", len);
 
    return writen(fdSkt, (void *)name, len * sizeof(char));
-
-    
 }
 
 int receiveResponse(){
