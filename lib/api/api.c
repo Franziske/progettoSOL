@@ -56,7 +56,7 @@ int receiveResponse(){
    int err;
    err = readn(fdSkt, &res, sizeof(int));
    printf("ricevuto : %d\n", res);
-   CHECKERRE(err, -1, "readn failed");
+   CHECKERRE(err, -1, "Errore readn: ");
    return res;
 
 }
@@ -147,7 +147,7 @@ int receiveAndSaveFile(const char* dirname){
 //restituisce il numero di bytes letti
 int getFile(void **buffer, char *fileName){
    FILE* ifp = fopen(fileName, "rb");
-   //CHECKERRSC(ifp, NULL, "fopen failed");
+   CHECKERRSC(ifp, NULL, "fopen failed");
    if (ifp == NULL)
       return -1;
 

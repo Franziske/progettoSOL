@@ -37,7 +37,7 @@ typedef enum
 //struttura utilizzata per costruire liste di stringhe
 typedef struct string_t {  
     char* name;
-    string* nextString;
+    struct string_t* nextString;
 } string;
 
 
@@ -50,7 +50,7 @@ typedef struct serverRequest_t
    char *fileName;             //nome del file associato alla richiesta
    int client;                 //fd client che l'ha richiesta
    int flags;                
-   ServerRequest *next; //puntatore alla richiesta successiva NULL se non ce ne sono
+   struct serverRequest_t *next; //puntatore alla richiesta successiva NULL se non ce ne sono
 } ServerRequest;
 
 

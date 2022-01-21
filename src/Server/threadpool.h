@@ -7,7 +7,7 @@
 
 typedef struct client_t{
     int fdC;
-    Client* nextC;
+    struct client_t* nextC;
 }Client;
 
 typedef struct threadpool_t {
