@@ -19,6 +19,7 @@ void addRequest(ServerRequest** list, ServerRequest* newReq){
 
 
 void freeRequests(ServerRequest** list){
+
     ServerRequest*aux;
     while(*list != NULL){
         aux = *list;
@@ -51,7 +52,7 @@ threadpool* createThreadPool(int nWorker, int dimQueue){
 	free(pool);
 	return NULL;
     }
-    pool->queue = (taskfun_t *)malloc(sizeof(taskfun_t) * abs(pool->queue_size));
+    pool->queue = (ServerRequest *)malloc(sizeof(ServerRequest) * abs(pool->queueMax));
     if (pool->queue == NULL) {
 	free(pool->threads);
 	free(pool);
@@ -66,7 +67,7 @@ threadpool* createThreadPool(int nWorker, int dimQueue){
     }
     for(int i = 0; i < nWorker; i++) {
         if(pthread_create(&(pool->threads[i]), NULL,
-                          workerpool_thread, (void*)pool) != 0) {
+                          workerFun, (void*)pool) != 0) {
 	    /* errore fatale, libero tutto forzando l'uscita dei threads */
             destroyThreadPool(pool, 1);
 	    errno = EFAULT;
