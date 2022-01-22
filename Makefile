@@ -1,10 +1,11 @@
 CC			= gcc
 WARNINGS	= -g  -Wall -Wextra -Wno-unused-variable -pedantic
-CFLAGS  	= -std=c99 $(WARNINGS) -lpthread
+CFLAGS  	= -std=c99 -D_GNU_SOURCE $(WARNINGS) -lpthread -pthread
 DFT			= -D_DEFAULT_SOURCE
 LIB			= lib
 OBJ			= obj
 SRC			= src
+CONF		= configs/config.ini
 BIN			= bin
 ZIP			= francesca_ugazio-CorsoA
 TARGETS		= c server client
@@ -24,13 +25,16 @@ threadpool:
 utils:
 	$(CC) $(CFLAGS) $(DFT) -c $(LIB)/utils/utils.c -o $(OBJ)/utils.o
 
+storage:
+	$(CC) $(CFLAGS) $(DFT) -c $(LIB)/storage/storage.c -o $(OBJ)/storage.o
+
 client: utils api
 	$(CC) $(CFLAGS) $(DFT) -c $(SRC)/Client/client.c -o $(OBJ)/client.o
 	$(CC) $(CFLAGS) $(OBJ)/utils.o $(OBJ)/api.o $(OBJ)/client.o -o $(BIN)/client.out
 
-server: ini utils threadpool
+server: ini utils threadpool storage
 	$(CC) $(CFLAGS) -c $(SRC)/Server/server.c -o $(OBJ)/server.o
-	$(CC) $(CFLAGS) $(OBJ)/ini.o $(OBJ)/server.o -o $(BIN)/server.out
+	$(CC) $(CFLAGS) $(OBJ)/ini.o $(OBJ)/utils.o $(OBJ)/threadpool.o $(OBJ)/storage.o $(OBJ)/server.o -o $(BIN)/server.out
 
 clean:
 	@echo Clean
