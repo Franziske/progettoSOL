@@ -145,7 +145,7 @@ int receiveAndSaveFile(const char* dirname){
 }
 //legge il contenuto del file fileName e lo scrive in buffer
 //restituisce il numero di bytes letti
-int getFile(void **buffer, char *fileName){
+int getFile(void **buffer, const char *fileName){
    FILE* ifp = fopen(fileName, "rb");
    CHECKERRSC(ifp, NULL, "fopen failed");
    if (ifp == NULL)
@@ -318,12 +318,13 @@ settato opportunamente.*/
       errno = ENOENT;
       return -1;
    }
+   *buf = malloc(res);
    res = readn(fdSkt,*buf, (size_t)res);
-    if(res == -1){ 
+    if(res < 0){ 
       errno = ECOMM;
       return -1;
    }
-   *size = res;
+   *size = (size_t)&res;
    return 0;
  }
 
@@ -343,7 +344,7 @@ effettivamente letti), -1 in caso di fallimento, errno viene settato opportuname
       return -1;
    }
     res = receiveResponse();  // res in questo caso è il numero di file che invia il server
-    for (size_t i = 0; i < res; i++)
+    for (int i = 0; i < res; i++)
     {
       if(receiveAndSaveFile(dirname) == -1) {
          errno = ECOMM;
@@ -387,7 +388,7 @@ scritto in ‘dirname’; Ritorna 0 in caso di successo, -1 in caso di falliment
    res = receiveResponse();   // res in questo caso è il numero di file che invia il server
 
    if(dirname != NULL){
-     for (size_t i = 0; i < res; i++)
+     for (int i = 0; i < res; i++)
     {
       if(receiveAndSaveFile(dirname) == -1) {
          errno = ECOMM;
@@ -403,9 +404,9 @@ scritto in ‘dirname’; Ritorna 0 in caso di successo, -1 in caso di falliment
 nel file è garantita essere atomica dal file server. Se ‘dirname’ è diverso da NULL, il file eventualmente spedito
 dal server perchè espulso dalla cache per far posto ai nuovi dati di ‘pathname’ dovrà essere scritto in ‘dirname’;
 Ritorna 0 in caso di successo, -1 in caso di fallimento, errno viene settato opportunamente.*/
-int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname){
+/*int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname){
    return -1;
-}
+}*/
 
 /*In caso di successo setta il flag O_LOCK al file. Se il file era stato aperto/creato con il flag O_LOCK e la
 richiesta proviene dallo stesso processo, oppure se il file non ha il flag O_LOCK settato, l’operazione termina
@@ -424,6 +425,7 @@ caso di successo, -1 in caso di fallimento, errno viene settato opportunamente.*
       return -1;
    }
    res = receiveResponse();
+   return res;
  }
 
 /*Resetta il flag O_LOCK sul file ‘pathname’. L’operazione ha successo solo se l’owner della lock è il processo che
@@ -441,6 +443,7 @@ fallimento, errno viene settato opportunamente.*/
       return -1;
    }
    res = receiveResponse();
+   return res;
  }
 
 /*Richiesta di chiusura del file puntato da ‘pathname’. Eventuali operazioni sul file dopo la closeFile falliscono.
@@ -457,6 +460,7 @@ Ritorna 0 in caso di successo, -1 in caso di fallimento, errno viene settato opp
       return -1;
    }
    res = receiveResponse();
+   return res;
 
  }
 
@@ -474,4 +478,5 @@ stato locked da parte di un processo client diverso da chi effettua la removeFil
       return -1;
    }
    res = receiveResponse();
+   return res;
  }

@@ -238,7 +238,7 @@ int main(int argc, char const *argv[])
             int pTerm;
             read(signal_pipe[0], &pTerm, sizeof(int));
             termina = pTerm;
-		    printf("terminando con sig: %d\n", termina);
+		    printf("\n terminando con sig: %d\n", termina);
 		    break;
 		}
 	    }

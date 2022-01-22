@@ -22,8 +22,9 @@
 #define N 10
 
 
-void help(){}
-    //printf("-h: stampa la lista di tutte le opzioni accettatedal client e termina immediatamente;\n");
+void help(){
+    printf("comando help\n");
+}
 
 typedef struct Request{
     Operation op;       // quale operazione è stata richiesta
@@ -129,6 +130,7 @@ int main(int argc, char* const* argv){
   //controllo che ci siano opzioni altrimenti termino fallendo
      if (argc == 1) {
         //usage(argv[0]);
+        fprintf(stderr,"numero non valido di opzioni\n");
         return EXIT_FAILURE;
     }
 
@@ -150,15 +152,16 @@ int main(int argc, char* const* argv){
                 // optional
                 CHECKERRE(print, 1, "Richiesta mal formata:-p duplicato");
                 print = 1;
+                printf("stampe abilitate\n");
                 break;
             case 'f':
                 // required
                 CHECKERRE(socketInzialized, 1, "Richiesta mal formata:-f duplicato");
                 serverSocket = optarg;
+                printf("server socket inizializzata: %s\n", serverSocket);
                 socketInzialized = 1;
                 break;
             case 't':{
-                //timeout = strtoint(optarg);
                 int t;
                 t = atoi(optarg);
                 if(t < 0){
@@ -166,12 +169,12 @@ int main(int argc, char* const* argv){
                     return EXIT_FAILURE;
                 }
                 timeout = (size_t) t;
+                printf("timeout setted to: %ld millisec\n", timeout);
             }
                 break;
             case 'w': {
-                // write n files contained in dirFrom, if n = 0 write all files contained
+                
                 Request* req = malloc(sizeof(Request));
-                // extract dirFrom and n (if present)
                 
                 char* args = optarg;
                 req->op = Write;
@@ -316,7 +319,15 @@ int main(int argc, char* const* argv){
 
     // se ho richieste da eseguire che necessitano della connessione con il server:
     //apro la connesione con il server
+    aux = reqs;
 
+    while(aux!=NULL){
+        printf("richiesta: %d\n", aux->op);
+        printf("richiesta su : %s\n", aux->files->name);
+
+        aux = aux->next;
+        
+    }
    
 
     if (reqs != NULL) { 
@@ -383,7 +394,7 @@ int main(int argc, char* const* argv){
                 result = 0;
                 aux_p = reqs->files;
                 int flags = 3;
-                void* buffer;
+                void* buffer = NULL;
                 size_t dim;
                 result = openFile(aux_p->name, flags);
                 CHECKERRSC(result, -1, "Errore openFile: ");
