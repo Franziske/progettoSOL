@@ -253,7 +253,23 @@ Threadpool *createThreadPool(int nWorker)
 }
 
 
-int destroyThreadPool(Threadpool *pool, int force)
-{
+int destroyThreadPool(Threadpool *pool, int sig){
+
+    /*switch (sig){
+     //SIGINT e SIGQUIT
+    case 2: 
+    case 3:{
+        
+        break;
+    }
+
+    //SIGHUP
+    case 1:{
+        
+        break;
+    }
+    default:
+        break;
+    }*/
     return 0;
 }

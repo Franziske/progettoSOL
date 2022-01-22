@@ -11,6 +11,9 @@
 #include <signal.h>
 #include <sys/select.h>
 #include <sys/un.h> /* ind AF_UNIX */
+//#include <bits/signum.h>
+//#include <asm-generic/signal-defs.h>
+#include <stddef.h>
 
 #include "../../lib/ini/ini.h"
 #include "../../lib/utils/utils.h"
@@ -19,101 +22,45 @@
 #define SOCKNAME "./mysock"
 #define N 26
 
+ //capacita dello storage Mbytes
+    int capacity = 0; 
+  //numero massimo di files
+    int max = 0;
+
 
 typedef struct {
     sigset_t     *set;           /// set dei segnali da gestire (mascherati)
     int           signal_pipe;   /// descrittore di scrittura di una pipe senza nome
 } sigHandler_t;
 
-int readRequest (int fd_c, ServerRequest* req)//(int *op, int *dim, int *nameLen, char **name, int* flags, int fd_c, ServerRequest *req)
-{
-   int op = 0, dim = 0, nameLen = 0, flags = -1;
-   void *name = NULL;
-   int err;
-   err = readn(fd_c, &op, sizeof(int));
-   printf("ricevuto : %d\n", op);
-   CHECKERRE(err, -1, "readn failed");
-
-   //printf("readn = %d \n",readn(fd_c,&dim, sizeof(int)));
-   err = readn(fd_c, &dim, sizeof(int));
-   CHECKERRE(err, -1, "readn failed");
-   printf("ricevuto : %d\n", dim);
-
-   err = readn(fd_c, &flags, sizeof(int));
-   CHECKERRE(err, -1, "readn failed");
-   printf("ricevuto : %d\n", flags);
-
-   printf(" risultato readn lunghezza nome : %d \n",
-          err = readn(fd_c, &nameLen, sizeof(int)));
-   CHECKERRE(err, -1, "readn failed");
-   printf("ricevuto : %d\n", nameLen);
-
-   name = malloc(nameLen);
-
-   err = readn(fd_c, name, nameLen);
-   CHECKERRE(err, -1, "readn failed");
-
-   printf("ricevuto: %d,%d,%d\n", op, dim, nameLen);
-   printf("ricevuto: %s\n",name);
-
-   req->op = (Operation)op;
-   req->dim = dim;
-   req->nameLenght = nameLen;
-   req->fileName = name;
-   req->flags = flags;
-   req->next = NULL;
-
-   return 0;
-}
-
-
-
-
 // funzione eseguita dal signal handler thread
 static void *sigHandler(void *arg) {
     sigset_t *set = ((sigHandler_t*)arg)->set;
     int fd_pipe   = ((sigHandler_t*)arg)->signal_pipe;
 
-    for( ;; ) {
-	int sig;
-	int r = sigwait(set, &sig);
-	if (r != 0) {
-	    errno = r;
-	    perror("FATAL ERROR 'sigwait'");
-	    return NULL;
-	}
+    while(1) {
+        int sig;
+        int r = sigwait(set, &sig);
+        if (r != 0) {
+            errno = r;
+            perror("Errore sigwait : ");
+            return NULL;
+        }
 
-	switch(sig) {
-	case SIGINT:
-	case SIGTERM:
-	case SIGQUIT:
-	    //printf("ricevuto segnale %s, esco\n", (sig==SIGINT) ? "SIGINT": ((sig==SIGTERM)?"SIGTERM":"SIGQUIT") );
-	    close(fd_pipe);  // notifico il listener thread della ricezione del segnale
-	    return NULL;
-	default:  ; 
-	}
+        switch(sig) {
+        case SIGINT:
+        case SIGQUIT:
+        case SIGHUP:{
+            write(fd_pipe, &sig, sizeof(int));
+              close(fd_pipe);  // notifico il listener thread della ricezione del segnale
+            return NULL;
+        }
+        default:  ; 
+        }
     }
     return NULL;	   
 }
 //aggiunge la richiesta in coda
-
-void addRequest(ServerRequest **list, ServerRequest *newReq){
-
-   if ((*list) == NULL)
-   {
-      *list = newReq;
-   }
-   else
-   {
-      ServerRequest *aux = (*list);
-
-      while (aux->next != NULL)
-      {
-         aux = aux->next;
-      }
-      aux->next = newReq;
-   }
-}
 
 //rimuovo la richiesta in testa alla coda
 int removeRequest(ServerRequest **list, ServerRequest **currReq)
@@ -126,27 +73,13 @@ int removeRequest(ServerRequest **list, ServerRequest **currReq)
    return 0;
 }
 
-void freeRequests(ServerRequest **list)
-{
-   ServerRequest *aux;
-   while (*list != NULL)
-   {
-      aux = *list;
-      *list = aux->next;
-      free(aux->fileName);
-      free(aux);
-   }
-}
 
 
 
 int main(int argc, char const *argv[])
 {
 
-   //capacita dello storage Mbytes
-    int capacity; 
-    //numero massimo di files
-    int max;
+ 
     //numero di Workers
     int n;
 
@@ -154,7 +87,7 @@ int main(int argc, char const *argv[])
 
     //controllo la validità degli argomenti
     if(argc != 2){
-      fprintf(stderr, "Numero di argomenti non valido");
+      fprintf(stderr, "Numero di argomenti non valido\n");
       exit(EXIT_FAILURE);
     }
     const char* configurationFileName = argv[1];
@@ -190,11 +123,15 @@ int main(int argc, char const *argv[])
    printf("inizializzato\n");
 
 ////////////////////////////////////////////////////////////
-sigset_t mask;
-    sigemptyset(&mask);
-    sigaddset(&mask, SIGINT); 
-    sigaddset(&mask, SIGQUIT);
-    sigaddset(&mask, SIGTERM);
+    sigset_t mask;
+    err = sigemptyset(&mask);
+    CHECKERRSC(err,-1,"Errore sigemptyset: ");
+    err = sigaddset(&mask, SIGINT); 
+    CHECKERRSC(err,-1,"Errore sigaddset: ");
+    err = sigaddset(&mask, SIGQUIT); 
+    CHECKERRSC(err,-1,"Errore sigaddset: ");
+    err = sigaddset(&mask, SIGTERM); 
+    CHECKERRSC(err,-1,"Errore sigaddset: ");
 
     err = pthread_sigmask(SIG_BLOCK, &mask,NULL);
    CHECKERRNE(err,0,"Errore pthread_sigmask: ");
@@ -298,14 +235,17 @@ sigset_t mask;
 		if (i == signal_pipe[0]) {
 		    // ricevuto un segnale, esco ed inizio il protocollo di terminazione
             //controlla il tipo di terminazione
-		    termina = 1;
+            int pTerm;
+            read(signal_pipe[0], &pTerm, sizeof(int));
+            termina = pTerm;
+		    printf("terminando con sig: %d\n", termina);
 		    break;
 		}
 	    }
 	}
     }
     
-    destroyThreadPool(pool, 0);  // notifico che i thread dovranno uscire
+    destroyThreadPool(pool, termina);  // notifico che i thread dovranno uscire
 
     // aspetto la terminazione de signal handler thread
     pthread_join(sighandler_thread, NULL);
@@ -322,7 +262,7 @@ sigset_t mask;
 
 
 
-   void *buffer = malloc(N);
+   /*void *buffer = malloc(N);
    CHECKERRNE(buffer, NULL, "Errore malloc: ");
    
 
@@ -387,5 +327,5 @@ sigset_t mask;
    free(buffer);
    //free(name);
 
-   return 0;
+   return 0;*/
 }
