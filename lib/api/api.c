@@ -41,7 +41,7 @@ int sendRequest(serverOperation op, int dim, const char *name, int flags)
 
    if (writen(fdSkt, &flags, sizeof(int)) == -1)
       return -1;
-   printf("inviato : %d\n", op);
+   printf("inviato : %d\n", flags);
 
    size_t len = strlen(name) + 1;
    if (writen(fdSkt, (int *)&len, sizeof(int)) == -1)
@@ -52,7 +52,7 @@ int sendRequest(serverOperation op, int dim, const char *name, int flags)
 }
 
 int receiveResponse(){
-   int res;
+   int res = 0;
    int err;
    err = readn(fdSkt, &res, sizeof(int));
    printf("ricevuto : %d\n", res);
@@ -193,24 +193,27 @@ di fallimento, errno viene settato opportunamente.*/
 
    int res;
    struct timespec currSpec;
+   printf("name skt : %s\n", sockname);
    if ((fdSkt = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) return -1;
    sock = malloc(strlen(sockname)*sizeof(char)+1);
    strcpy(sock,sockname);
 
-   strncpy(sa.sun_path, sock, UNIX_PATH_MAX);
+   strncpy(sa.sun_path, sock, strlen(sock)*sizeof(char)+1);
    sa.sun_family = AF_UNIX;
 
    // connetto il client alla socket del server
    clock_gettime(CLOCK_REALTIME, &currSpec);
 
+   printf("fd skt : %d\n", fdSkt);
+
    
    int notElapsed = 1;  
    errno = 0;
    //tento di nuovo la connessione fino allo scadere del timeout
-   while ((res = (connect(fdSkt, (struct sockaddr *)&sa, sizeof(sa)) == -1))&&
+   while ((res = (connect(fdSkt, (struct sockaddr *)&sa, sizeof(sa))) == -1)&&
              (notElapsed =
-               (currSpec.tv_sec < abstime.tv_sec ||(
-               (currSpec.tv_sec == abstime.tv_sec) &&
+               ((currSpec.tv_sec < abstime.tv_sec) ||
+               ((currSpec.tv_sec == abstime.tv_sec) &&
                 (currSpec.tv_nsec < abstime.tv_nsec))))){
 
 

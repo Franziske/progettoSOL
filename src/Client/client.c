@@ -18,7 +18,6 @@
 #include "../../lib/api/api.h"
 
 #define UNIX_PATH_MAX 108 /* man 7 unix */
-#define SOCKNAME "../Server/mysock"
 #define N 10
 
 
@@ -462,7 +461,7 @@ int main(int argc, char* const* argv){
     }
     return EXIT_SUCCESS;
 
-   clock_gettime(CLOCK_REALTIME, &spec);
+   /*clock_gettime(CLOCK_REALTIME, &spec);
     spec.tv_sec  = spec.tv_sec + 10;
 
     printf("due time: %ld nanoseconds \n",spec.tv_nsec);
@@ -487,12 +486,12 @@ int main(int argc, char* const* argv){
 
    printf("file letti : %d  = \n", filesRead);
 
-   /*string*aux = fileList;
+   string*aux = fileList;
    while (aux!= NULL){
    printf("nella lista di file ho :%s \n", aux->name);
    aux = aux->nextString;
    }
-   printf("stampa finita\n");*/
+   printf("stampa finita\n");
 
    int flags = -1;
    int resSend = sendRequest(Lock, bytesRead, fileName, flags);
@@ -540,7 +539,7 @@ int main(int argc, char* const* argv){
 
    free(param);
 
-   freeStringList(&list);
+   freeStringList(&list);*/
 
   // close(fd_skt);
 

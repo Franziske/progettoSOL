@@ -101,6 +101,7 @@ int main(int argc, char const *argv[])
 
         //converto in intero e assegno a N
         n = stringToInt(workersN);
+        printf("numero di workers : %d\n", n);
         
     }
     const char *c = ini_get(config, NULL, "storageCapacity");
@@ -109,6 +110,7 @@ int main(int argc, char const *argv[])
 
         //converto in intero e assegno a capacity
         capacity = stringToInt(c);
+        printf("capacity: %d\n", capacity);
 
     }
 
@@ -118,6 +120,7 @@ int main(int argc, char const *argv[])
 
         //converto in intero e assegno a max
         max = stringToInt(m);
+         printf("max number of file: %d\n", max);
     }
    ini_free(config);
    printf("inizializzato\n");
@@ -180,12 +183,13 @@ int main(int argc, char const *argv[])
    err = listen(listenfd, SOMAXCONN);
    CHECKERRSC(err, -1, "Errore listen: ");
 
-
- Threadpool* pool = NULL;
+    printf("listenfd: %d\n", listenfd);
+    Threadpool* pool = NULL;
 
     pool = createThreadPool(n); 
 
     CHECKERRE(pool, NULL, "Errore nella creazione del pool di thread");
+    printf("creato thread pool\n");
     
     fd_set set, tmpset;
     FD_ZERO(&set);
@@ -201,36 +205,43 @@ int main(int argc, char const *argv[])
     while(!termina) {
 	// copio il set nella variabile temporanea per la select
 	tmpset = set;
+    printf("pre select\n");
+    
 	err = select(fdmax+1, &tmpset, NULL, NULL, NULL);
     CHECKERRSC(err,-1, "Errore select: ");
 
+    printf("postselect\n");
+
 	// cerchiamo di capire da quale fd abbiamo ricevuto una richiesta
 	for(int i=0; i <= fdmax; i++) {
-	    if (FD_ISSET(i, &tmpset)) {
-		int connfd;
+        int isset = FD_ISSET(i, &tmpset);
+        printf("fd settato = %d \n", i);
+	    if (isset) {
+            int connfd;
 
-		if (i == listenfd) { // e' una nuova richiesta di connessione 
-		    connfd = accept(listenfd, (struct sockaddr*)NULL ,NULL);
-          CHECKERRSC(connfd, -1, "Errore accept");
+            if (i == listenfd) { // e' una nuova richiesta di connessione 
+                connfd = accept(listenfd, (struct sockaddr*)NULL ,NULL);
+                CHECKERRSC(connfd, -1, "Errore accept");
+                printf("ho ricevuto richiesta di connessione da fd: %d\n", connfd);
 
-		    /*int* args = malloc(2*sizeof(int));
-		    if (!args) {
-		      perror("FATAL ERROR 'malloc'");
-		      goto _exit;
-		    }
-		    args[0] = connfd;
-		    args[1] = (int)&termina;
-		    
-		    int r =addToQueue(pool, args);
-		    if (r==0) continue; // aggiunto con successo
-		    if (r<0) { // errore interno
-			fprintf(stderr, "FATAL ERROR, adding to the thread pool\n");
-		    } else { // coda dei pendenti piena
-			fprintf(stderr, "SERVER TOO BUSY\n");
-		    }
-		    free(args);*/
-		    close(connfd);
-		    continue;
+                /*int* args = malloc(2*sizeof(int));
+                if (!args) {
+                perror("FATAL ERROR 'malloc'");
+                goto _exit;
+                }
+                args[0] = connfd;
+                args[1] = (int)&termina;
+                
+                int r =addToQueue(pool, args);
+                if (r==0) continue; // aggiunto con successo
+                if (r<0) { // errore interno
+                fprintf(stderr, "FATAL ERROR, adding to the thread pool\n");
+                } else { // coda dei pendenti piena
+                fprintf(stderr, "SERVER TOO BUSY\n");
+                }
+                free(args);*/
+                close(connfd);
+                continue;
 		}
 		if (i == signal_pipe[0]) {
 		    // ricevuto un segnale, esco ed inizio il protocollo di terminazione
