@@ -57,6 +57,7 @@ int receiveResponse(){
    err = readn(fdSkt, &res, sizeof(int));
    printf("ricevuto : %d\n", res);
    CHECKERRE(err, -1, "Errore readn: ");
+   CHECKRES(res, 0);
    return res;
 
 }
@@ -245,7 +246,7 @@ di fallimento, errno viene settato opportunamente.*/
          exit(EXIT_FAILURE);
       }
    
-   printf("file description %d \n",fdSkt);
+   printf("file descriptor %d \n",fdSkt);
    return fdSkt;
 
 

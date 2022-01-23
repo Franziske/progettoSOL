@@ -59,20 +59,27 @@ Client* getRequest(Threadpool* pool){
 
     pthread_mutex_lock(&(pool->lock));
 
+    printf("un worker è pronto per la req \n");
+
     while ((pool->queue) == NULL) {
-        
+
+        printf("un worker aspetta la req \n");
         pthread_cond_wait(&(pool->cond), &(pool->lock));          
     }
-    Client* c = pool->head;
-    pool->head = pool->head->nextC;
+
+    printf("un worker ha preso la req \n");
+    Client* c = pool->queue;
+    pool->queue = pool->queue->nextC;
     pool->count --;
     pthread_mutex_unlock(&(pool->lock));
     return c;
 
 }
 
-void addRequest(Client **list, Client *newReq)
+Client* addRequest(Client **list, Client *newReq)
 {
+
+    printf("aggiungo req alla coda \n");
     if ((*list) == NULL)
     {
         *list = newReq;
@@ -87,6 +94,8 @@ void addRequest(Client **list, Client *newReq)
         }
         aux->nextC = newReq;
     }
+
+    return newReq;
 }
 
 void freeRequests(Client **list)
@@ -101,9 +110,9 @@ void freeRequests(Client **list)
     }
 }
 
-int addToQueue(Threadpool *pool, int* args){
+int addToQueue(Threadpool *pool, int arg){
 
-     if (pool == NULL || args == NULL)
+     if (pool == NULL || arg < 2)
     {
         errno = EINVAL;
         return -1;
@@ -116,14 +125,15 @@ int addToQueue(Threadpool *pool, int* args){
         UNLOCK_RETURN(&(pool->lock), -1);
         return 1; // esco con valore errore
     }*/
+    printf("sono nella add to queue \n");
 
-    Client* req = malloc(sizeof(Client));
-    req->fdC = args[1];
-    req->nextC = NULL;
+    Client* fdReq = malloc(sizeof(Client));
+    fdReq->fdC = arg;
+    fdReq->nextC = NULL;
 
     pthread_mutex_lock(&(pool->lock));
 
-    addRequest(&(pool->queue), req);
+    pool->tail = addRequest(&(pool->queue), fdReq);
 
     int r;
     if ((r = pthread_cond_signal(&(pool->cond))) != 0)
@@ -135,6 +145,8 @@ int addToQueue(Threadpool *pool, int* args){
     }
     pthread_mutex_unlock(&(pool->lock));
     //UNLOCK_RETURN(&(pool->lock), -1);
+
+    printf("ritorno dalla add to queue\n");
     return 0;
 
 }
@@ -143,7 +155,7 @@ int addToQueue(Threadpool *pool, int* args){
 static void* workerFun(void *threadpool){
 
     int res;
-
+    printf("sono un tread e sto funzionando\n");
     Threadpool *pool = (Threadpool *)threadpool;
     //controlla != NULL
 
@@ -162,34 +174,44 @@ static void* workerFun(void *threadpool){
        req->client = fdC;
 
        switch (req->op){
-        case OF :
+        case OF : {
             res = OpenInStorage();
             break;
-
-         case CF :
+}
+         case CF : {
             res = CloseInStorage();
             break;
-         case W :
+        }
+         case W : {
            res = WriteInStorage();
             break;
-         case R :
+        }
+         case R : {
             res = ReadFromStorage();
             break;
-         case L :
+        }
+         case L :{
+             printf("Ho ricevuto una lock\n");
             res = LockInStorage();
             break;
-         case U :
+        }
+         case U : {
             res = UnlockInStorage();
             break;
-        case CC :
+        }
+        case CC : {
             /* closeConnection */
             break;
+        }
 
         default:
             break;
         }
 
         sendResponse(fdC,res);
+       int r = write(pool->fdsPipe, &fdC, sizeof(int));
+       printf("risultato write su pipe : %d \n", r);
+        printf(" scrivo su pipe %d fdc: %d\n", pool->fdsPipe, fdC);
         free(req);
      }
 
@@ -202,8 +224,8 @@ return NULL;
 
 
 
-Threadpool *createThreadPool(int nWorker)
-{
+Threadpool *createThreadPool(int nWorker, int fd){
+
     if (nWorker <= 0)
     {
         errno = EINVAL;
@@ -216,8 +238,9 @@ Threadpool *createThreadPool(int nWorker)
 
     // condizioni iniziali
     pool->nWorker = nWorker;
-    pool->head = pool->tail = NULL;
+    pool->tail = NULL;
     pool->count = 0;
+    pool->fdsPipe = fd;
 
     /* Allocate thread and task queue */
     pool->threads = malloc(sizeof(pthread_t) * nWorker);

@@ -143,7 +143,12 @@ int stringToInt(const char* s);
         fprintf(stderr, errString); \
         exit(EXIT_FAILURE);      \
     }
-
+#define CHECKRES(var,value)\
+     if(var != value){      \
+         \
+        printf(stdout, "Richiesta andata a buon fine \n"); \
+        exit(EXIT_FAILURE);      \
+    }
 // dal professore
 /*
 #define SYSCALL_EXIT(name, r, sc, str, ...)	\

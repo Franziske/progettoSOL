@@ -27,6 +27,9 @@
   //numero massimo di files
     int max = 0;
 
+//terminazione 
+    int termina=0;
+
 
 typedef struct {
     sigset_t     *set;           /// set dei segnali da gestire (mascherati)
@@ -148,16 +151,18 @@ int main(int argc, char const *argv[])
    CHECKERRSC(err,-1,"Errore sigaction: ");
 
     /*
-     * La pipe viene utilizzata come canale di comunicazione tra il signal handler thread ed il 
-     * thread lisener per notificare la terminazione. 
-     * Una alternativa è quella di utilizzare la chiamata di sistema 
-     * 'signalfd' ma non e' POSIX.
-     *
-     */
+    * La pipe viene utilizzata come canale di comunicazione tra il signal handler thread ed il 
+    * thread listener 
+    */
     int signal_pipe[2];
    err = pipe(signal_pipe);
    CHECKERRSC(err,-1,"Errore pipe: ");
-   
+
+   //pipe utilizzata come comunicazione fra workers e master
+
+   int fds_pipe[2];
+   err = pipe(fds_pipe);
+   CHECKERRSC(err,-1,"Errore pipe: ");
     
     pthread_t sighandler_thread;
     sigHandler_t handlerArgs = { &mask, signal_pipe[1] };
@@ -186,76 +191,153 @@ int main(int argc, char const *argv[])
     printf("listenfd: %d\n", listenfd);
     Threadpool* pool = NULL;
 
-    pool = createThreadPool(n); 
+    pool = createThreadPool(n, fds_pipe[1]); 
+    close(fds_pipe[1]);
 
     CHECKERRE(pool, NULL, "Errore nella creazione del pool di thread");
     printf("creato thread pool\n");
     
-    fd_set set, tmpset;
+
+
+    fd_set set; //tmpset;
     FD_ZERO(&set);
-    FD_ZERO(&tmpset);
+    //FD_ZERO(&tmpset);
 
     FD_SET(listenfd, &set);        // aggiungo il listener fd al master set
     FD_SET(signal_pipe[0], &set);  // aggiungo il descrittore di lettura della signal_pipe
-    
+    FD_SET(fds_pipe[0], &set);   //aggiungo il fd della fds_pipe
+
     // tengo traccia del file descriptor con id piu' grande
     int fdmax = (listenfd > signal_pipe[0]) ? listenfd : signal_pipe[0];
+    fdmax = (fdmax > fds_pipe[0]) ? fdmax : fds_pipe[0];
 
-    volatile int termina = 0;
+    //volatile int termina = 0;
     while(!termina) {
-	// copio il set nella variabile temporanea per la select
-	tmpset = set;
-    printf("pre select\n");
-    
-	err = select(fdmax+1, &tmpset, NULL, NULL, NULL);
-    CHECKERRSC(err,-1, "Errore select: ");
+        // copio il set nella variabile temporanea per la select
+        //tmpset = set;
+        printf("pre select\n");
+        
+        err = select(fdmax+1, &set, NULL, NULL, NULL);
+        printf("%d err \n",err);
+        CHECKERRSC(err,-1, "Errore select: ");
 
-    printf("postselect\n");
+        printf("postselect\n");
+        //int i=0;
 
-	// cerchiamo di capire da quale fd abbiamo ricevuto una richiesta
-	for(int i=0; i <= fdmax; i++) {
-        int isset = FD_ISSET(i, &tmpset);
-        printf("fd settato = %d \n", i);
-	    if (isset) {
-            int connfd;
+        // cerchiamo di capire da quale fd abbiamo ricevuto una richiesta
+        for(int i=0; i <= fdmax; i++) {
+        //while(i<=fdmax){
+            int isset = FD_ISSET(i, &set);
+            
+            if (isset) {
+                int connfd;
+                printf("fd settato = %d \n", i);
 
-            if (i == listenfd) { // e' una nuova richiesta di connessione 
-                connfd = accept(listenfd, (struct sockaddr*)NULL ,NULL);
-                CHECKERRSC(connfd, -1, "Errore accept");
-                printf("ho ricevuto richiesta di connessione da fd: %d\n", connfd);
+                if (i == listenfd) { 
+                    // e' una nuova richiesta di connessione 
+                    connfd = accept(listenfd, (struct sockaddr*)NULL ,NULL);
+                    CHECKERRSC(connfd, -1, "Errore accept");
+                    printf("ho ricevuto richiesta di connessione da fd: %d\n", connfd);
+                    FD_SET(connfd, &set); 
+                    if(connfd > fdmax) fdmax = connfd;
 
+                    /*int* args = malloc(2*sizeof(int));
+                    if (!args) {
+                    perror("Errore malloc");
+                    destroyThreadPool;
+                    unlink(SOCKNAME);
+                    return -1;
+                    }
+                    args[0] = connfd;
+                    args[1] = (int)&termina;
+                    
+                    int r =addToQueue(pool, args);
+                    if (r==0) continue; // aggiunto con successo
+                    fprintf(stderr, "Errore aggiungendo il fd %d alla coda delle richieste del thread pool\n", connfd);
+                    
+                    free(args);
+                    close(connfd);*/
+                
+                    continue;
+                }
+                if (i == signal_pipe[0]) {
+                    // ricevuto un segnale, esco ed inizio il protocollo di terminazione
+                    //controlla il tipo di terminazione
+                    int pTerm;
+                    read(signal_pipe[0], &pTerm, sizeof(int));
+                    termina = pTerm;
+                    printf("\nterminando con sig: %d\n", termina);
+                    break;
+                }
+
+                 if (i == fds_pipe[0]) {
+
+                     printf("ricevuto fd da pipe %d \n", fds_pipe[0]);
+                    // ricevuto un sulla pipe un fd sul quale mi devo rimettere in ascolto 
+                    int clientBack;
+                    err = read(fds_pipe[0], &clientBack, sizeof(int));
+                    CHECKERRSC(err,-1,"Errore read da pipe: ");
+                    FD_SET(clientBack, &set);
+                    if(clientBack > fdmax) fdmax = clientBack;
+
+                    printf("Client con fd %d is back\n", clientBack);
+
+                    break;
+                }
+
+
+                printf("Ricevuta richiesta fd %d \n", i);
+                FD_CLR(i,&set);
+                /*int* args = malloc(1*sizeof(int));
+                    if (!args) {
+                    perror("Errore malloc");
+                    destroyThreadPool;
+                    unlink(SOCKNAME);
+                    return -1;
+                    }
+                    args[0] = i;
+                    //args[1] = (int)&termina;*/
+                    printf("aggiungendo fd alle richieste %d\n", i);
+                    int arg = i;
+                    
+                    int r =addToQueue(pool, arg);
+                    if (r==0){ // aggiunto con successo
+
+                
+                    continue;
+                    }
+                    
+                    fprintf(stderr, "Errore aggiungendo il fd %d alla coda delle richieste del thread pool\n", connfd);
+
+                   
+                    
+                    //free(args);
+                    //close(connfd);
+            
+                //un client ha inviato una richiesta
                 /*int* args = malloc(2*sizeof(int));
                 if (!args) {
-                perror("FATAL ERROR 'malloc'");
-                goto _exit;
+                perror("Errore malloc");
+                destroyThreadPool;
+                unlink(SOCKNAME);
+                return -1;
                 }
                 args[0] = connfd;
                 args[1] = (int)&termina;
                 
                 int r =addToQueue(pool, args);
                 if (r==0) continue; // aggiunto con successo
-                if (r<0) { // errore interno
-                fprintf(stderr, "FATAL ERROR, adding to the thread pool\n");
-                } else { // coda dei pendenti piena
-                fprintf(stderr, "SERVER TOO BUSY\n");
-                }
-                free(args);*/
-                close(connfd);
+                fprintf(stderr, "Errore aggiungendo il fd %d alla coda delle richieste del thread pool\n", connfd);
+                
+                free(args);
+                close(connfd);*/
                 continue;
-		}
-		if (i == signal_pipe[0]) {
-		    // ricevuto un segnale, esco ed inizio il protocollo di terminazione
-            //controlla il tipo di terminazione
-            int pTerm;
-            read(signal_pipe[0], &pTerm, sizeof(int));
-            termina = pTerm;
-		    printf("\n terminando con sig: %d\n", termina);
-		    break;
-		}
-	    }
-	}
+
+            }
+            //i++;
+        }
     }
-    
+    printf("protocollo di terminazione\n");
     destroyThreadPool(pool, termina);  // notifico che i thread dovranno uscire
 
     // aspetto la terminazione de signal handler thread
@@ -263,14 +345,6 @@ int main(int argc, char const *argv[])
 
     unlink(SOCKNAME);    
     return 0;   
-
-
-
-
-
-
-
-
 
 
    /*void *buffer = malloc(N);

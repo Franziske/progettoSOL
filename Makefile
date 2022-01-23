@@ -38,7 +38,7 @@ server: ini utils threadpool storage
 
 clean:
 	@echo Clean
-	-rm -rf $(OBJ)/* $(BIN)/*
+	-rm -rf $(OBJ)/* $(BIN)/* mysock
 	@echo Done
 
 c: clean

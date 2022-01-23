@@ -15,14 +15,16 @@ typedef struct threadpool_t {
     pthread_cond_t   cond;    // usata per notificare un worker thread 
     pthread_t  *threads; // array di worker id
     Client *queue;      // coda interna per client che hanno inviato una richiesta
-    Client *head, *tail;           // riferimenti della coda
+    Client *tail;           // riferimenti della coda
     int nWorker;           // numero di thread (size dell'array threads)
     int count;                // numero di task nella coda dei task pendenti
+    int fdsPipe;
 } Threadpool;
 
-Threadpool* createThreadPool(int nWorker);
+Threadpool* createThreadPool(int nWorker, int fd);
 int destroyThreadPool(Threadpool *pool, int force);
 int addRequestToPool(Threadpool *pool, ServerRequest* req) ;
+int addToQueue(Threadpool *pool, int arg);
 
 
 /**
