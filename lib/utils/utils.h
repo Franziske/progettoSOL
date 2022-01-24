@@ -40,6 +40,11 @@ typedef struct string_t {
     struct string_t* nextString;
 } string;
 
+typedef struct client_t{
+    int fdC;
+    struct client_t* nextC;
+}Client;
+
 
 //Struttura contenente le info necessarie al server relative ad una richiesta
 typedef struct serverRequest_t
@@ -108,6 +113,8 @@ static inline int writen(long fd, void* buf, size_t size) {
     }
     return 1;
 }
+
+Client* addRequest(Client **list, Client *newReq);
 
 
 // funzioni utilizzate per gestire liste di stringhe

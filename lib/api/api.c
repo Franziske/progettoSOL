@@ -30,7 +30,7 @@ static char* sock;
 
 int sendRequest(serverOperation op, int dim, const char *name, int flags)
 {
-   printf("sending request");
+   printf("sending request\n");
 
    if (writen(fdSkt, (int *)&op, sizeof(int)) == -1)
       return -1;
@@ -257,17 +257,17 @@ di fallimento, errno viene settato opportunamente.*/
 fallimento, errno viene settato opportunamente.*/
  int closeConnection(const char* sockname){
    int res; 
-   if (strncmp(sa.sun_path, sockname, (size_t)strlen + 1) != 0) {
-   errno = EINVAL;
-   return -1;
+   if (strncmp(sa.sun_path, sockname, (size_t)strlen(sockname)+ 1) != 0) {
+      errno = EINVAL;
+      return -1;
    }
-      else {
+   else {
 
-   int res= sendRequest(CC, 0, NULL,-1);
-      if(res == -1){ 
-   errno = ECOMM;
-   return -1;
-   }
+   int res = sendRequest(CC, 0, "bye",-1);
+   if(res == -1){ 
+      errno = ECOMM;
+      return -1;
+      }
    res = receiveResponse();
    return close(fdSkt) && res;
     }

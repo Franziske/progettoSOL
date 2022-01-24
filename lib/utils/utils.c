@@ -18,6 +18,27 @@ int stringToInt(const char* s){
 
 }
 
+Client* addRequest(Client **list, Client *newReq){
+
+    printf("aggiungo req alla coda \n");
+    if ((*list) == NULL)
+    {
+        *list = newReq;
+    }
+    else
+    {
+        Client* aux = (*list);
+
+        while (aux->nextC != NULL)
+        {
+            aux = aux->nextC;
+        }
+        aux->nextC = newReq;
+    }
+
+    return newReq;
+}
+
 //funzioni utilizzate per gestire liste di stringhe
 
 void freeStringList(string** list){

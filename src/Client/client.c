@@ -448,11 +448,14 @@ int main(int argc, char* const* argv){
                 
                 aux_p= aux_p->nextString;
             }
-
-                
             break;
             }
-            default: ;
+
+            default:{
+                fprintf(stderr, "richiesta mal formata");
+                freeRequests(&reqs);
+                return EXIT_FAILURE;
+            }
            
 
         }
@@ -463,8 +466,14 @@ int main(int argc, char* const* argv){
     }
     freeRequests(&reqs);
 
+    
+
     }
-    return EXIT_SUCCESS;
+
+    printf("Terminando Client....");
+    int res = closeConnection(serverSocket);
+    CHECKERRSC(res, -1, "Errore closeConnection: ")
+   
 
    /*clock_gettime(CLOCK_REALTIME, &spec);
     spec.tv_sec  = spec.tv_sec + 10;
@@ -581,9 +590,4 @@ int main(int argc, char* const* argv){
    printf("uscita dal while il tempo Current time: %ld seconds\n",currSpec.tv_sec);
        */  
 
-   
-   
-   
-
-   return 0;
 }

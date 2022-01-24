@@ -22,8 +22,9 @@ int readRequest (int fd_c, ServerRequest* req)//(int *op, int *dim, int *nameLen
    CHECKERRE(err, -1, "readn failed");
    printf("ricevuto : %d\n", flags);
 
-   printf(" risultato readn lunghezza nome : %d \n",
-          err = readn(fd_c, &nameLen, sizeof(int)));
+   err = readn(fd_c, &nameLen, sizeof(int));
+
+  // printf(" risultato readn lunghezza nome : %d \n", nameLen);
    CHECKERRE(err, -1, "readn failed");
    printf("ricevuto : %d\n", nameLen);
 
@@ -75,27 +76,7 @@ Client* getRequest(Threadpool* pool){
 
 }
 
-Client* addRequest(Client **list, Client *newReq)
-{
 
-    printf("aggiungo req alla coda \n");
-    if ((*list) == NULL)
-    {
-        *list = newReq;
-    }
-    else
-    {
-        Client* aux = (*list);
-
-        while (aux->nextC != NULL)
-        {
-            aux = aux->nextC;
-        }
-        aux->nextC = newReq;
-    }
-
-    return newReq;
-}
 
 void freeRequests(Client **list)
 {
@@ -154,11 +135,14 @@ int addToQueue(Threadpool *pool, int arg){
 static void* workerFun(void *threadpool){
 
     int res;
+    int closeConn;
     printf("sono un tread e sto funzionando\n");
     Threadpool *pool = (Threadpool *)threadpool;
     //controlla != NULL
 
      while (1) {
+       
+        closeConn = 0;
         Client* c = getRequest(pool);
         if (c == NULL)
             break;
@@ -194,7 +178,7 @@ static void* workerFun(void *threadpool){
             res = LockInStorage();
             
            int r = write(pool->fdsPipe, &fdC, sizeof(int));
-            printf("risultato write su pipe : %d \n", r);
+           //check write
             break;
         }
          case U : {
@@ -202,18 +186,23 @@ static void* workerFun(void *threadpool){
             break;
         }
         case CC : {
-            /* closeConnection */
-            break;
+
+            printf("%s from client %d \n", req->fileName,req->client);
+            res = 0;
+            closeConn = 1;
         }
 
         default:
             break;
         }
         sendResponse(fdC,res);
-        
+
        
         printf(" scrivo su pipe %d fdc: %d\n", pool->fdsPipe, fdC);
         free(req);
+
+        if(closeConn == 1) close(fdC);
+
      }
 
      //scrivi fd su pipe per comunicare al master di ri mettersi in ascolto
