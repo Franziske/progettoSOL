@@ -1,4 +1,20 @@
 
+typedef struct client_t{
+    int fdC;
+    struct client_t* nextC;
+}Client;
+
+
+typedef struct file_t{
+    char*name;
+    char*dim;
+    int lock;
+    Client* lockQueue;
+    int open;           //il file è aperto? qualcuno sta leggendo?
+    void* buff;         //puntatore al buffer in memoria contenente il file
+
+}File;
+
 
 
 int OpenInStorage();

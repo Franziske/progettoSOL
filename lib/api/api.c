@@ -30,6 +30,7 @@ static char* sock;
 
 int sendRequest(serverOperation op, int dim, const char *name, int flags)
 {
+   printf("sending request");
 
    if (writen(fdSkt, (int *)&op, sizeof(int)) == -1)
       return -1;

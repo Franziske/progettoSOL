@@ -1,5 +1,4 @@
-#include "../../lib/utils/utils.h"
-#include "../../lib/storage/storage.h"
+
 
 
 #include "threadpool.h"
@@ -193,6 +192,9 @@ static void* workerFun(void *threadpool){
          case L :{
              printf("Ho ricevuto una lock\n");
             res = LockInStorage();
+            
+           int r = write(pool->fdsPipe, &fdC, sizeof(int));
+            printf("risultato write su pipe : %d \n", r);
             break;
         }
          case U : {
@@ -207,10 +209,9 @@ static void* workerFun(void *threadpool){
         default:
             break;
         }
-
         sendResponse(fdC,res);
-       int r = write(pool->fdsPipe, &fdC, sizeof(int));
-       printf("risultato write su pipe : %d \n", r);
+        
+       
         printf(" scrivo su pipe %d fdc: %d\n", pool->fdsPipe, fdC);
         free(req);
      }
@@ -241,6 +242,7 @@ Threadpool *createThreadPool(int nWorker, int fd){
     pool->tail = NULL;
     pool->count = 0;
     pool->fdsPipe = fd;
+     printf("--->fd pipe in thread pool %d \n", fd);
 
     /* Allocate thread and task queue */
     pool->threads = malloc(sizeof(pthread_t) * nWorker);

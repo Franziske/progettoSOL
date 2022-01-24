@@ -43,7 +43,9 @@ static void *sigHandler(void *arg) {
 
     while(1) {
         int sig;
+        printf("pre sigwait");
         int r = sigwait(set, &sig);
+            printf("post sigwait");
         if (r != 0) {
             errno = r;
             perror("Errore sigwait : ");
@@ -142,10 +144,10 @@ int main(int argc, char const *argv[])
     err = pthread_sigmask(SIG_BLOCK, &mask,NULL);
    CHECKERRNE(err,0,"Errore pthread_sigmask: ");
 
-    // ignoro SIGPIPE per evitare di essere terminato da una scrittura su un socket
+    // ignoro SIGPIPE per evitare di essere terminato da una scrittura
     struct sigaction s;
     memset(&s,0,sizeof(s));    
-    s.sa_handler=SIG_IGN;
+    s.sa_handler = SIG_IGN;
 
    err = sigaction(SIGPIPE,&s,NULL);
    CHECKERRSC(err,-1,"Errore sigaction: ");
@@ -192,16 +194,16 @@ int main(int argc, char const *argv[])
     Threadpool* pool = NULL;
 
     pool = createThreadPool(n, fds_pipe[1]); 
-    close(fds_pipe[1]);
+    // close(fds_pipe[1]);
 
     CHECKERRE(pool, NULL, "Errore nella creazione del pool di thread");
     printf("creato thread pool\n");
     
 
 
-    fd_set set; //tmpset;
+    fd_set set, tmpset;
     FD_ZERO(&set);
-    //FD_ZERO(&tmpset);
+    FD_ZERO(&tmpset);
 
     FD_SET(listenfd, &set);        // aggiungo il listener fd al master set
     FD_SET(signal_pipe[0], &set);  // aggiungo il descrittore di lettura della signal_pipe
@@ -209,15 +211,25 @@ int main(int argc, char const *argv[])
 
     // tengo traccia del file descriptor con id piu' grande
     int fdmax = (listenfd > signal_pipe[0]) ? listenfd : signal_pipe[0];
+
     fdmax = (fdmax > fds_pipe[0]) ? fdmax : fds_pipe[0];
 
     //volatile int termina = 0;
     while(!termina) {
         // copio il set nella variabile temporanea per la select
-        //tmpset = set;
+        tmpset = set;
+
+        printf("--->fd pipe %d %d\n", fds_pipe[0],fds_pipe[1]);
         printf("pre select\n");
+
+        printf("fdmax prima della select = %d\n", fdmax);
+
         
-        err = select(fdmax+1, &set, NULL, NULL, NULL);
+        err = select(fdmax+1, &tmpset, NULL, NULL, NULL);
+
+
+
+
         printf("%d err \n",err);
         CHECKERRSC(err,-1, "Errore select: ");
 
@@ -227,7 +239,7 @@ int main(int argc, char const *argv[])
         // cerchiamo di capire da quale fd abbiamo ricevuto una richiesta
         for(int i=0; i <= fdmax; i++) {
         //while(i<=fdmax){
-            int isset = FD_ISSET(i, &set);
+            int isset = FD_ISSET(i, &tmpset);
             
             if (isset) {
                 int connfd;
@@ -276,18 +288,24 @@ int main(int argc, char const *argv[])
                     // ricevuto un sulla pipe un fd sul quale mi devo rimettere in ascolto 
                     int clientBack;
                     err = read(fds_pipe[0], &clientBack, sizeof(int));
+                    
                     CHECKERRSC(err,-1,"Errore read da pipe: ");
+                    //if(clientBack == 0 );
                     FD_SET(clientBack, &set);
                     if(clientBack > fdmax) fdmax = clientBack;
 
                     printf("Client con fd %d is back\n", clientBack);
 
-                    break;
+                    continue;
                 }
 
 
                 printf("Ricevuta richiesta fd %d \n", i);
                 FD_CLR(i,&set);
+                if(fdmax == i){
+                    printf("decremento fd max \n");
+                    fdmax--;
+                }
                 /*int* args = malloc(1*sizeof(int));
                     if (!args) {
                     perror("Errore malloc");

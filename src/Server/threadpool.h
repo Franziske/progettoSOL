@@ -4,11 +4,12 @@
 #include <pthread.h>
 
 #include "../../lib/utils/utils.h"
+#include "../../lib/storage/storage.h"
 
-typedef struct client_t{
+/*typedef struct client_t{
     int fdC;
     struct client_t* nextC;
-}Client;
+}Client;*/
 
 typedef struct threadpool_t {
     pthread_mutex_t  lock;    // mutua esclusione nell'accesso all'oggetto
