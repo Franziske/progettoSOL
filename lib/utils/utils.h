@@ -22,15 +22,15 @@ typedef enum
 
 //possibili operazioni lette dal server
 
-typedef enum
-{
-    OF,
-    CF,
-    W,
-    R,
-    L,
-    U,
-    CC
+typedef enum{
+    OF,     //Open a file
+    CF,     //Close a file
+    W,      //Write a file
+    R,      //Read a file
+    L,      //Lock a file
+    U,      //Unlock a file
+    C,      //Cancel a file
+    CC      //Close connection
 
 } serverOperation;
 

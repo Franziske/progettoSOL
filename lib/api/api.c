@@ -477,7 +477,7 @@ stato locked da parte di un processo client diverso da chi effettua la removeFil
         return -1;
     }
 
-   int res = sendRequest(R,0,pathname,0);
+   int res = sendRequest(C,0,pathname,0);
      if(res == -1){ 
       errno = ECOMM;
       return -1;

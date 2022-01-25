@@ -113,7 +113,7 @@ int addToQueue(Threadpool *pool, int arg){
 
     pthread_mutex_lock(&(pool->lock));
 
-    pool->tail = addRequest(&(pool->queue), fdReq);
+    pool->tail = addClient(&(pool->queue), fdReq);
 
     int r;
     if ((r = pthread_cond_signal(&(pool->cond))) != 0)
@@ -158,31 +158,40 @@ static void* workerFun(void *threadpool){
 
        switch (req->op){
         case OF : {
-            res = OpenInStorage();
+            res = OpenInStorage(req->fileName, req->dim, req->flags, req->client);
             break;
 }
          case CF : {
-            res = CloseInStorage();
+            res = CloseInStorage(req->fileName, req->client);
             break;
         }
          case W : {
-           res = WriteInStorage();
+           res = WriteInStorage(req->fileName, req->dim, req->client);
             break;
         }
          case R : {
-            res = ReadFromStorage();
+            res = ReadFromStorage(req->fileName, req->client);
             break;
         }
          case L :{
-             printf("Ho ricevuto una lock\n");
-            res = LockInStorage();
-            
-           int r = write(pool->fdsPipe, &fdC, sizeof(int));
-           //check write
-            break;
+                printf("Ho ricevuto una lock\n");
+                res = LockInStorage(req->fileName, req->client);
+                
+                int r = write(pool->fdsPipe, &fdC, sizeof(int));
+                //check write
+                break;
         }
          case U : {
-            res = UnlockInStorage();
+                res = UnlockInStorage(req->fileName, req->client);
+                int r = write(pool->fdsPipe, &fdC, sizeof(int));
+                //check write
+            break;
+        }
+
+        case C : {
+
+            res = DeleteFromStorage(req->fileName, req->client);
+
             break;
         }
         case CC : {
@@ -231,7 +240,6 @@ Threadpool *createThreadPool(int nWorker, int fd){
     pool->tail = NULL;
     pool->count = 0;
     pool->fdsPipe = fd;
-     printf("--->fd pipe in thread pool %d \n", fd);
 
     /* Allocate thread and task queue */
     pool->threads = malloc(sizeof(pthread_t) * nWorker);
