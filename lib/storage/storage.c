@@ -9,6 +9,9 @@
 extern int capacity;
 extern int max;
 
+int currMem = 0;
+int currNFile = 0;
+
 File** storageList = NULL;
 
 
@@ -63,27 +66,88 @@ File* findFileAndPrec(char* nameF, File* prec){
 
 }
 
+int sendFile(File*f, int fd){
+    int res;
+    int nameLen;
+
+    nameLen = strlen(f->name)+1;
+
+    res = writen(fd, nameLen, sizeof(int));
+    if(res == -1) return -5;
+    res = writen(fd, f->dim, sizeof(int));
+    if(res == -1) return -5;
+    res = writen(fd, f->name, nameLen);
+    if(res == -1) return -5;
+    res = writen(fd, f->buff, f->dim);
+    if(res == -1) return -5;
+
+    return 0;
+        
+}
+
+
+//restitusco la lista di file vittima per far spazio nello storage a n byte
+
+File* FindVictims(int n, int fd, int* victimsCount){
+    int count = 0;
+    File* victims = NULL;
+    File* vTail;
+
+    if((*storageList) == NULL) return -4;
+
+    while(count < n){
+
+        if((*storageList) == NULL) return -4;
+        pthread_mutex_lock(&(*storageList)->lockFile);
+        (*storageList)->lock = fd;
+
+        count = count + (*storageList)->dim;
+
+        //addFile(victims, f);
+
+        if (victims == NULL){
+        victims = (*storageList);
+        vTail = victims;
+        (*storageList) = (*storageList)->nextFile;
+        vTail->nextFile = NULL;
+        }
+        else{
+
+            vTail->nextFile = (*storageList);
+            (*storageList) = (*storageList)->nextFile; 
+            vTail = vTail->nextFile;
+            vTail->nextFile = NULL;
+
+        }
+        //addCient(&(*storageList)->open),);    //deleted from storage
+        pthread_mutex_unlock(&(*storageList)->lockFile);
+
+        (*victimsCount)++;
+       
+    }
+
+
+}
+
 
 
 //Ho una specifica funzione per ogni possibile operazione da effetuare sullo storage
 
+//LA OPEN PUO ESSERE FATTA DA PIU CILIENT FALLA DIVENTARE UA LISTA
 
 int OpenInStorage(char* name, int dim, int flags, int fd){
     
     File* f = findFile(name);
     
-    if(flags == 0){
+    if(flags < 2){
 
-        //O_LOCK e O_CREATE non sono settati
+        //O_CREATE non è settato
         //controllo che il file sia presente nello storage
         //altrimenti errore
-
-        //ritorno la struttura file 
         
         if(f == NULL){
             return -1;
         }
-        //f= malloc(sizeof(File));
 
 
     }
@@ -127,8 +191,8 @@ int OpenInStorage(char* name, int dim, int flags, int fd){
         }
         else return -4;
     }
-    //setto il flag open
-    f->open = fd;
+    //aggiungo fd alla lista di chi ha aperto il file
+    addClient(f->open, fd);
     return 1;
     
 
@@ -142,18 +206,87 @@ int CloseInStorage(char* name, int fd){
             return -1;
     }
     //controllo che sia stata effettuata prima una open dal client c
-    if(f->open != fd) return -3;
+    return removeClient((&(f->open), fd) != 0);
 
     //se il file esiste aperto da fd lo chiudo
-    f->open = -1;
+    //f->open = -1;
 
 }
-int WriteInStorage(char*name, int dim, int fd){
 
+
+//restituisce il numero di file espulsi
+int WriteInStorage(char*name, int dim, int flags, int fd){
+
+    File* victims = NULL; 
      File* f = findFile(name);
      if(f == NULL){
             return -1;
     }
+
+    if(f->lock != fd) return -3;
+
+    //if(f->open != fd) return -3;
+    //controllo che il client abbia aperto il file
+
+    Client* aux = f->open;
+    while(aux != NULL){
+        if(aux->fdC == fd)break;
+        aux = aux->nextC;
+    }
+    if(aux == NULL) return -3;
+
+    //controllo se sforo la capacità dello storage in tal caso seleziono le vittime
+
+    int victimsCount = 0;
+
+    if(currMem + dim > capacity){
+
+        victims = FindVictims(dim, fd, &victimsCount);
+    }
+
+    //invio al client il numero di file vittima 
+    int err;
+    err = writen(fd, &victimsCount, sizeof(int));
+    //CHECKERRE(err, -1, "Errore writen: ");
+
+    if(flags == 1){
+
+        //invio i file vittima e li cancello dal 
+
+        while(victims != NULL){
+
+            Client* aux = victims;
+
+            //gestisci errore send
+
+            sendFile(aux, fd);
+
+            victims = victims->nextFile;
+            freeFile(aux);
+        }
+        
+        //invio i file vittima al al client
+
+    }
+    else{
+        while(victims != NULL){
+            Client* aux = victims;
+            victims = victims->nextFile;
+            freeFile(aux);
+        }
+    }
+
+
+    f->buff = malloc(dim);
+
+    int res = readn(fd, f->buff, dim);
+
+    if (res == f->dim) return 0;
+
+    return -4;
+    // controlla res
+
+    //CHECKERRE(res, -1, "readn failed");
     //controllo che sia stata effetuata open con create e lock flags
 
     //aggiungo file
@@ -216,6 +349,7 @@ int UnlockInStorage(char*name, int fd){
     //se il file esiste lockato da fd tolgo la lock
     if (pthread_mutex_unlock(&(f->lockFile)) == 0){
     f->lock = -1;
+    pthread_cond_signal(&(f->condFile));
     return 0;
     }
     else return -4;

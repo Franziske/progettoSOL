@@ -12,7 +12,7 @@ typedef struct file_t{
     int lock;                     //fd del client che detiene la lock -1 se non è detenuta da nessuno
     pthread_mutex_t  lockFile;    // mutua esclusione nell'accesso al file
     pthread_cond_t   condFile;
-    int open;           //il file è aperto? qualcuno sta leggendo?
+    Client* open;           //se il file è aperto contiene i fd di chi lo ha aperto
     void* buff;         //puntatore al buffer in memoria contenente il file
     struct file_t* nextFile;
 

@@ -39,6 +39,31 @@ Client* addClient(Client **list, Client *newReq){
     return newReq;
 }
 
+int removeClient(Client** list, int c){
+
+    if(*list==NULL) return -3;
+
+    Client*aux = (*list);
+    Client* prec = NULL;
+     if(aux->fdC == c){
+            (*list)=(*list)->nextC;
+            free(aux);
+            return 0;
+        }
+    prec = aux;
+    aux = aux->nextC;
+    while(aux != NULL){
+         if(aux->fdC == c){
+             prec->nextC = aux->nextC;
+            free(aux);
+            return 0;
+         }
+       prec = aux;
+       aux = aux->nextC;
+    }
+    return -3;
+}
+
 //funzioni utilizzate per gestire liste di stringhe
 
 void freeStringList(string** list){

@@ -24,7 +24,7 @@ typedef struct threadpool_t {
 
 Threadpool* createThreadPool(int nWorker, int fd);
 int destroyThreadPool(Threadpool *pool, int force);
-int addRequestToPool(Threadpool *pool, ServerRequest* req) ;
+//int addRequestToPool(Threadpool *pool, ServerRequest* req) ;
 int addToQueue(Threadpool *pool, int arg);
 
 
