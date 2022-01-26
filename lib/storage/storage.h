@@ -10,7 +10,7 @@ typedef struct file_t{
     char*name;
     char*dim;
     int lock;                     //fd del client che detiene la lock -1 se non è detenuta da nessuno
-    //pthread_mutex_t  lockFile;    // mutua esclusione nell'accesso al file
+    pthread_mutex_t  mutex;    // mutua esclusione nell'accesso alle strutture del file
     //pthread_cond_t   condFile;
     Client* lockReqs;             // lista dei client che hanno esplicitamente richiesto la lock
     Client* open;           //se il file è aperto contiene i fd di chi lo ha aperto
@@ -19,7 +19,7 @@ typedef struct file_t{
 
 }File;
 
-
+int storageInit(int c,int m);
 
 int OpenInStorage();
 int CloseInStorage();

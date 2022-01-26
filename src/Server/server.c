@@ -17,6 +17,7 @@
 
 #include "../../lib/ini/ini.h"
 #include "../../lib/utils/utils.h"
+#include "../../lib/storage/storage.h"
 #include "threadpool.h"
 #define UNIX_PATH_MAX 108 /* man 7 unix */
 #define SOCKNAME "./mysock"
@@ -128,6 +129,13 @@ int main(int argc, char const *argv[])
          printf("max number of file: %d\n", max);
     }
    ini_free(config);
+
+    if(storageInit(capacity,max) != 0){
+
+        //termino //TODO
+        exit(EXIT_FAILURE);
+    }
+
    printf("inizializzato\n");
 
 ////////////////////////////////////////////////////////////
