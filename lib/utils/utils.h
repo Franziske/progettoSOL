@@ -115,6 +115,8 @@ static inline int writen(long fd, void* buf, size_t size) {
 }
 
 
+int sendResponse(int fd, int res);
+
 Client* addClient(Client **list, Client *newReq);
 //Client* addRequest(Client **list, Client *newReq);
 

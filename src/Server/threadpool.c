@@ -176,9 +176,15 @@ static void* workerFun(void *threadpool){
          case L :{
                 printf("Ho ricevuto una lock\n");
                 res = LockInStorage(req->fileName, req->client);
-                
+                if(res != 1){       //la richiesta è terminata o a buon fine o no
+
+                //controlla errori send
+                sendResponse(fdC,res);
                 int r = write(pool->fdsPipe, &fdC, sizeof(int));
                 //check write
+                }
+                //se res == 1 la richiesta di lock è memorizzata nella coda del file
+                //sarà eseguita quando il possessore della lock la rilascerà
                 break;
         }
          case U : {
@@ -204,7 +210,7 @@ static void* workerFun(void *threadpool){
         default:
             break;
         }
-        sendResponse(fdC,res);
+        //sendResponse(fdC,res);
 
        
         printf(" scrivo su pipe %d fdc: %d\n", pool->fdsPipe, fdC);

@@ -31,12 +31,28 @@ File* findFile(char* nameF){
 
 }
 
+void addFile(File* newFile){
+
+    if( (*storageList) == NULL){
+        (*storageList) = newFile;
+    }
+    else{
+        File* aux = (*storageList);
+
+        while (aux->nextFile != NULL){
+            aux = aux->nextFile;
+        }
+        aux->nextFile = newFile;
+    }
+
+}
+
 
 void freeFile(File*f){
     free(f->name);
     free(f->buff);
-    pthread_mutex_destroy(&(f->lockFile));
-    pthread_cond_destroy(&(f->condFile));
+    //pthread_mutex_destroy(&(f->lockFile));
+    //pthread_cond_destroy(&(f->condFile));
     free(f);
 }
 
@@ -100,7 +116,7 @@ File* FindVictims(int n, int fd, int* victimsCount){
 
         if((*storageList) == NULL) return -4;
 
-        pthread_mutex_lock(&(*storageList)->lockFile);
+        //_lock(&(*storageList)->lockFile);
         (*storageList)->lock = fd;
 
         count = count + (*storageList)->dim;
@@ -125,7 +141,7 @@ File* FindVictims(int n, int fd, int* victimsCount){
 
         //la lock effettuata sulla testa all'inizio del ciclo 
         //corrisponde all'unlock sull'ultimo elemento di victims
-        pthread_mutex_unlock(&(vTail->lockFile));
+       // pthread_mutex_unlock(&(vTail->lockFile));
 
         (*victimsCount)++;
        
@@ -138,51 +154,51 @@ File* FindVictims(int n, int fd, int* victimsCount){
 
 //Ho una specifica funzione per ogni possibile operazione da effetuare sullo storage
 
-//LA OPEN PUO ESSERE FATTA DA PIU CILIENT FALLA DIVENTARE UA LISTA
-
 int OpenInStorage(char* name, int dim, int flags, int fd){
     
     File* f = findFile(name);
     
     if(flags < 2){
-
         //O_CREATE non è settato
         //controllo che il file sia presente nello storage
         //altrimenti errore
-        
         if(f == NULL){
             return -1;
         }
-
-
     }
-    if(flags > 2){
+    if(flags >=2){
         //O_CREATE è settato
         //controlle che il file non esista già
         //altrimenti errore
         if(f != NULL){
             return -2;
         }
+
+        //creo il nuovo file
+        f = malloc(sizeof(File));
         f->name = name;
         f->dim = dim;
         f->lock = -1;
+        f->lockReqs = NULL;
+        f->open = NULL;
         f->nextFile = NULL;
         f->buff = NULL;
-        if ((pthread_mutex_init(&(f->lockFile), NULL) != 0) ||
+        /*if ((pthread_mutex_init(&(f->lockFile), NULL) != 0) /* ||
         (pthread_cond_init(&(f->condFile), NULL) != 0)){
 
-            free(f->name);
-            free(f);
-            return -4;
-        }
-
-        //creo il file e ritorno la struttura file
+            freeFile(f);
+        }*/ 
     }
 
     if(flags % 2 == 1){
         //O_LOCK settato
         //setto flag lock
-        if(pthread_mutex_lock(&(f->lockFile)) == 0){
+        if(f->lock == -1 || f->lock == fd){
+
+            f->lock = fd;
+
+
+        //if(pthread_mutex_trylock(&(f->lockFile)) == 0){
 
 
             // inutilr è già la semantica della lock
@@ -193,14 +209,23 @@ int OpenInStorage(char* name, int dim, int flags, int fd){
                 printf(" aspetta che sia rilasciata la lock \n");
                 pthread_cond_wait(&(f->condFile), &(f->lockFile));          
             }*/
-            f->lock = fd;
+            //f->lock = fd;
 
         }
-        else return -4;
+        else{
+            //è stata richiesta la lock ma il file è già lockato restituisco errore
+            if(flags == 3){
+                //avevo creato il file ma l'operazione di lock non è andata a buon fine
+               freeFile(f);
+            }
+            return -4;
+        }
     }
     //aggiungo fd alla lista di chi ha aperto il file
-    addClient(f->open, fd);
-    return 1;
+    addClient(&(f->open), fd);
+
+    addFile(f);
+    return 0;
     
 
 }
@@ -327,8 +352,17 @@ int LockInStorage(char*name, int fd){
     //provo ad acquisire la lock
 
     if(f->lock == fd) return 0;
+    if(f->lock == -1){ 
+        f->lock = fd;
+        return 0;
+    }
+    addClient(&(f->lockReqs), fd);
+
+    return 1;
+
+    //int res = pthread_mutex_trylock(&(f->lockFile));
    
-    if(pthread_mutex_lock(&(f->lockFile)) == 0){
+    /*if(res == 0){
 
         /*printf("un client cerca di eseguire la lock su %s \n", f->name);
 
@@ -336,12 +370,17 @@ int LockInStorage(char*name, int fd){
 
             printf(" aspetta che sia rilasciata la lock \n");
             pthread_cond_wait(&(f->condFile), &(f->lockFile));          
-        }*/
+        }
         f->lock = fd;
         return 0;
+    }*/
 
-    }
-    else return -4;
+    // la lock non è andata a buon fine perchè già acquisita da un altro client
+    //if(res == EBUSY){
+        
+    //}
+
+   // else return -4;
     
 }
 
@@ -359,9 +398,25 @@ int UnlockInStorage(char*name, int fd){
     //controllo che sia stata effettuata prima una lock dal client c
     if(f->lock != fd) return -3;
 
-    //se il file esiste lockato da fd tolgo la lock
-    f->lock = -1;
-    if (pthread_mutex_unlock(&(f->lockFile)) == 0){
+    //se il file esiste lockato da fd 
+    //controllo la richiesta di lock in coda 
+    if(f->lockReqs == NULL){
+        f->lock = -1;
+        return 0;
+    }
+
+    f->lock = f->lockReqs->fdC;
+    Client* aux = f->lockReqs;
+    f->lockReqs = f->lockReqs->nextC;
+    free(aux);
+
+    sendResponse(f->lock, 0);
+
+    
+
+   
+   
+   /* if (pthread_mutex_unlock(&(f->lockFile)) == 0){
     
     //pthread_cond_signal(&(f->condFile));
     return 0;
@@ -370,7 +425,7 @@ int UnlockInStorage(char*name, int fd){
         //CHIEDERE
         f->lock = fd;
     return -4;
-    }
+    }*/
 
 }
 
@@ -382,8 +437,7 @@ int DeleteFromStorage(char* name, int fd){
         return -1;
     }
 
-    pthread_mutex_lock(&(f->lockFile));
-
+   //pthread_mutex_lock(&(f->lockFile));
 
     if(f->lock != fd) return -3;
     if(prec == NULL){

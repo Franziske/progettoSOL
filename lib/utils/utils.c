@@ -18,6 +18,15 @@ int stringToInt(const char* s){
 
 }
 
+
+int sendResponse(int fd, int res){
+    int err;
+    err = writen(fd, &res, sizeof(int));
+    printf("inviato : %d\n", res);
+    CHECKERRE(err, -1, "Errore writen: ");
+    return res;
+}
+
 Client* addClient(Client **list, Client *newReq){
 
     printf("aggiungo req alla coda \n");
