@@ -1,5 +1,5 @@
 CC			= gcc
-WARNINGS	= -g  -Wall -Wextra -Wno-unused-variable -pedantic
+WARNINGS	= -\ -Wall -Wextra -Wno-unused-variable -pedantic
 CFLAGS  	= -std=c99 -D_GNU_SOURCE $(WARNINGS) -lpthread -pthread
 DFT			= -D_DEFAULT_SOURCE
 LIB			= lib
@@ -36,6 +36,12 @@ server: ini utils threadpool storage
 	$(CC) $(CFLAGS) -c $(SRC)/Server/server.c -o $(OBJ)/server.o
 	$(CC) $(CFLAGS) $(OBJ)/ini.o $(OBJ)/utils.o $(OBJ)/threadpool.o $(OBJ)/storage.o $(OBJ)/server.o -o $(BIN)/server.out
 
+test_server:
+	valgrind -s --leak-check=full --show-leak-kinds=all  bin/server.out configs/config.ini
+
+test1:
+	./scripts/test_1.sh
+ 
 clean:
 	@echo Clean
 	-rm -rf $(OBJ)/* $(BIN)/* mysock
