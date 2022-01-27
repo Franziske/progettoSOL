@@ -36,7 +36,7 @@ int storageInit(int c,int m){
 
 File* findFile(char* nameF){
 
-    if((*storageList) == NULL) return NULL;
+    if(storageList == NULL) return NULL;
 
     File* aux = (*storageList);
 
@@ -216,6 +216,7 @@ int OpenInStorage(char* name, int dim, int flags, int fd){
         //controllo che il file sia presente nello storage
         //altrimenti errore
         if(f == NULL){
+            //pthread_mutex_unlock(&(f->mutex));
             return -1;
         }
     }
@@ -227,6 +228,7 @@ int OpenInStorage(char* name, int dim, int flags, int fd){
             pthread_mutex_unlock(&(f->mutex));
             return -2;
         }
+        printf("creo il file \n");
 
         //creo il nuovo file
         f = malloc(sizeof(File));
@@ -255,6 +257,7 @@ int OpenInStorage(char* name, int dim, int flags, int fd){
         //setto flag lock
         //pthread_mutex_lock(&(f->mutex));
         if(f->lock == -1 || f->lock == fd){
+            printf("setto il flag lock sul file \n");
 
             f->lock = fd;
         pthread_mutex_unlock(&(f->mutex));
@@ -291,12 +294,16 @@ int OpenInStorage(char* name, int dim, int flags, int fd){
 
     pthread_mutex_lock(&(f->mutex));
     addClient(&(f->open), newC);
+    printf("aggiungo fd a chi ha aperto il file \n");
     pthread_mutex_unlock(&(f->mutex));
 
     if (addFile(f) != 0){
+        printf("file non aggiunto \n");
         freeFile(f);
         return -4;
     }
+
+    printf("file aggiunto \n");
     return 0;
     
 
@@ -307,11 +314,14 @@ int CloseInStorage(char* name, int fd){
 
     File* f = findFile(name);
      if(f == NULL){
-            pthread_mutex_unlock(&(f->mutex));
+            //pthread_mutex_unlock(&(f->mutex));
+            printf("il file non esiste \n");
             return -1;
     }
     //controllo che sia stata effettuata prima una open dal client c
     //pthread_mutex_lock(&(f->mutex));
+
+    printf("chiudo il file \n");
     int res = removeClient(&(f->open), fd);
     pthread_mutex_unlock(&(f->mutex));
 
@@ -326,17 +336,25 @@ int CloseInStorage(char* name, int fd){
 //restituisce il numero di file espulsi
 int WriteInStorage(char*name, int dim, int flags, int fd){
 
+    //leggo il file
+     void* buff = malloc(dim);
+
+    int res = readn(fd, buff, dim);
+
      //controllo che sia stata effetuata open con create e lock flags
 
     File* victims = NULL; 
     File* f = findFile(name);
     if(f == NULL){
         pthread_mutex_unlock(&(f->mutex));
+        printf("file non trovato\n");
             return -1;
     }
      //pthread_mutex_lock(&(f->mutex));
     if(f->lock != fd){
         pthread_mutex_unlock(&(f->mutex));
+        printf("file trovato ma senza lock da fd\n");
+
         return -3;
     }
     pthread_mutex_unlock(&(f->mutex));
@@ -350,6 +368,7 @@ int WriteInStorage(char*name, int dim, int flags, int fd){
         aux = aux->nextC;
     }
     if(aux == NULL){
+        printf("file trovato ma non aperto da fd\n");
         //pthread_mutex_unlock(&(f->mutex));
         return -3;
     }
@@ -373,6 +392,8 @@ int WriteInStorage(char*name, int dim, int flags, int fd){
     //invio al client il numero di file vittima 
     int err;
     err = writen(fd, &victimsCount, sizeof(int));
+
+    printf("file vittima %d\n", victimsCount);
     //CHECKERRE(err, -1, "Errore writen: ");
 
     if(flags == 1){
@@ -407,12 +428,10 @@ int WriteInStorage(char*name, int dim, int flags, int fd){
         }
     }
 
-
-    f->buff = malloc(dim);
-
-    int res = readn(fd, f->buff, dim);
-
-    if (res == f->dim) return 0;
+    if (res == f->dim){
+         f->buff = buff;
+        return 0;
+    }
 
     return -4;
     // controlla res

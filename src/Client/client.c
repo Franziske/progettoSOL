@@ -362,7 +362,7 @@ int main(int argc, char* const* argv){
                     result = 0;
                     result = openFile(aux_p->name, flags);
                     CHECKERRSC(result, -1, "Errore openFile: ");
-                    usleep(timeout *1000);
+                    //usleep(timeout *1000);
                     result = 0;
                     result = writeFile(aux_p->name, reqs->dirTo);
                     CHECKERRSC(result, -1, "Errore writeFile: ");

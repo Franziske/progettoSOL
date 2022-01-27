@@ -148,14 +148,23 @@ static void* workerFun(void *threadpool){
        switch (req->op){
         case OF : {
             res = OpenInStorage(req->fileName, req->dim, req->flags, req->client);
+            //controlla errori send
+                sendResponse(fdC,res);
+                int r = write(pool->fdsPipe, &fdC, sizeof(int));
+                //check write
             break;
 }
          case CF : {
             res = CloseInStorage(req->fileName, req->client);
+            //controlla errori send
+                sendResponse(fdC,res);
+                int r = write(pool->fdsPipe, &fdC, sizeof(int));
+                //check write
             break;
         }
          case W : {
-           res = WriteInStorage(req->fileName, req->dim, req->client);
+           res = WriteInStorage(req->fileName, req->dim, req->flags,req->client);
+            printf("risultato Write in storage: %d\n", res);
             break;
         }
          case R : {

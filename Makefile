@@ -36,7 +36,7 @@ server: ini utils threadpool storage
 	$(CC) $(CFLAGS) -c $(SRC)/Server/server.c -o $(OBJ)/server.o
 	$(CC) $(CFLAGS) $(OBJ)/ini.o $(OBJ)/utils.o $(OBJ)/threadpool.o $(OBJ)/storage.o $(OBJ)/server.o -o $(BIN)/server.out
 
-test_server:
+test_server: all
 	valgrind -s --leak-check=full --show-leak-kinds=all  bin/server.out configs/config.ini
 
 test1:
