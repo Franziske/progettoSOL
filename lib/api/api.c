@@ -58,7 +58,7 @@ int receiveResponse(){
    err = readn(fdSkt, &res, sizeof(int));
    printf("ricevuto : %d\n", res);
    CHECKERRE(err, -1, "Errore readn: ");
-   CHECKRES(res, 0);
+   //CHECKRES(res, 0);
    return res;
 
 }

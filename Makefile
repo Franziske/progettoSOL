@@ -1,5 +1,5 @@
 CC			= gcc
-WARNINGS	= -\ -Wall -Wextra -Wno-unused-variable -pedantic
+WARNINGS	= -g -Wall -Wextra -Wno-unused-variable -pedantic
 CFLAGS  	= -std=c99 -D_GNU_SOURCE $(WARNINGS) -lpthread -pthread
 DFT			= -D_DEFAULT_SOURCE
 LIB			= lib

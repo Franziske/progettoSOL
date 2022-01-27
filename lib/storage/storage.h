@@ -1,3 +1,6 @@
+#ifndef STORAGE_H_
+#define STORAGE_H_
+
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
@@ -28,3 +31,5 @@ int ReadFromStorage();
 int LockInStorage();
 int DeleteFromStorage();
 int UnlockInStorage();
+
+#endif
