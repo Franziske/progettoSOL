@@ -222,13 +222,9 @@ int main(int argc, char const *argv[])
 
     fdmax = (fdmax > fds_pipe[0]) ? fdmax : fds_pipe[0];
 
-    //volatile int termina = 0;
     while(!termina) {
         // copio il set nella variabile temporanea per la select
         tmpset = set;
-
-        printf("--->fd pipe %d %d\n", fds_pipe[0],fds_pipe[1]);
-        printf("pre select\n");
 
         printf("fdmax prima della select = %d\n", fdmax);
 
@@ -283,88 +279,109 @@ int main(int argc, char const *argv[])
                 if (i == signal_pipe[0]) {
                     // ricevuto un segnale, esco ed inizio il protocollo di terminazione
                     //controlla il tipo di terminazione
-                    int pTerm;
-                    read(signal_pipe[0], &pTerm, sizeof(int));
-                    termina = pTerm;
+                    int sig;
+                    read(signal_pipe[0], &sig, sizeof(int));
+                    termina = sig;
+                    // non permetto nuove connessioni
+                    FD_CLR(listenfd,&set);
+                    close(listenfd);
+
+                    if(sig == 2 || sig == 3){
+                        //chiudo le connessioni che non hanno richieste in sospeso
+                        for(int j=0; j <= fdmax; j++){
+
+                            if(FD_ISSET(j,&set)){
+                                if(j != fds_pipe[0]){
+                                    FD_CLR(j,&set);
+                                    close(j);
+                                }           
+                            }
+                        }
+                    }
+
+                    terminationProtocol(pool, sig);
                     printf("\nterminando con sig: %d\n", termina);
-                    break;
+                   // break;
+                   continue;
                 }
 
-                 if (i == fds_pipe[0]) {
+                if (i == fds_pipe[0]) {
 
                      printf("ricevuto fd da pipe %d \n", fds_pipe[0]);
-                    // ricevuto un sulla pipe un fd sul quale mi devo rimettere in ascolto 
+                    // ricevuto sulla pipe un fd sul quale mi devo rimettere in ascolto 
                     int clientBack;
                     err = read(fds_pipe[0], &clientBack, sizeof(int));
                     
                     CHECKERRSC(err,-1,"Errore read da pipe: ");
                     //if(clientBack == 0 );
-                    FD_SET(clientBack, &set);
-                    if(clientBack > fdmax) fdmax = clientBack;
+
+                    //se non devo terminare il server immediatamente reinserisco fd
+                    if(termina != 2 && termina != 3){
+                        FD_SET(clientBack, &set);
+
+                        if(clientBack > fdmax) fdmax = clientBack;
 
                     printf("Client con fd %d is back\n", clientBack);
-
                     continue;
+                    }
+                    
+                    if(clientBack == -1){
+                        //sono terminate le richieste che erano in sospeso 
+                        //se ho chiusura immediata breaK
+                        if(termina != -1)break;
+                        //se tutti i client devono aver chiuso la connessione controllo i fd
+                        int j = 0;
+                        while(j <= fdmax){
+                            if(FD_ISSET(j,&set) && j!= fds_pipe[0]) break;
+                            j++;
+                        }
+                        if(j > fdmax)break; //non ho più nessun client ne' fra le richieste in sospeso
+                                            //ne' fra le connessioni in attesa di richieste
+
+                        //non ho più richieste in sospeso ma altre connessioni non chiuse con dei client
+                        continue;
+                    }
+                    //se devo terminare il server subito chiudo la connessione
+                    close(clientBack);
+                    continue;
+
+                    
                 }
 
 
                 printf("Ricevuta richiesta fd %d \n", i);
                 FD_CLR(i,&set);
                 if(fdmax == i){
-                    printf("decremento fd max \n");
-                    fdmax--;
-                }
-                /*int* args = malloc(1*sizeof(int));
-                    if (!args) {
-                    perror("Errore malloc");
-                    destroyThreadPool;
-                    unlink(SOCKNAME);
-                    return -1;
+                    int newMax = 0;
+                    for(int j=0; j<fdmax;j++){
+                        if(FD_ISSET(j,&set) && j>newMax) newMax = j;
+                        
                     }
-                    args[0] = i;
-                    //args[1] = (int)&termina;*/
-                    printf("aggiungendo fd alle richieste %d\n", i);
-                    int arg = i;
-                    
-                    int r =addToQueue(pool, arg);
-                    if (r==0){ // aggiunto con successo
-
-                
-                    continue;
-                    }
-                    
-                    fprintf(stderr, "Errore aggiungendo il fd %d alla coda delle richieste del thread pool\n", connfd);
-
-                   
-                    
-                    //free(args);
-                    //close(connfd);
-            
-                //un client ha inviato una richiesta
-                /*int* args = malloc(2*sizeof(int));
-                if (!args) {
-                perror("Errore malloc");
-                destroyThreadPool;
-                unlink(SOCKNAME);
-                return -1;
+                    printf("aggiorno fd max \n");
+                    fdmax = newMax;
                 }
-                args[0] = connfd;
-                args[1] = (int)&termina;
+               
+                printf("aggiungendo fd alle richieste %d\n", i);
+                int arg = i;
                 
-                int r =addToQueue(pool, args);
-                if (r==0) continue; // aggiunto con successo
-                fprintf(stderr, "Errore aggiungendo il fd %d alla coda delle richieste del thread pool\n", connfd);
-                
-                free(args);
-                close(connfd);*/
+                int r =addToQueue(pool, arg);
+                if (r==0){ // aggiunto con successo
                 continue;
+                }
+                    
+                fprintf(stderr, "Errore aggiungendo il fd %d alla coda delle richieste del thread pool\n", connfd);
+                    continue;
+
+
 
             }
-            //i++;
+          
         }
     }
     printf("protocollo di terminazione\n");
-    destroyThreadPool(pool, termina);  // notifico che i thread dovranno uscire
+
+    
+    destroyThreadPool(pool);  // notifico che i thread dovranno uscire
 
     // aspetto la terminazione de signal handler thread
     pthread_join(sighandler_thread, NULL);
@@ -373,70 +390,5 @@ int main(int argc, char const *argv[])
     return 0;   
 
 
-   /*void *buffer = malloc(N);
-   CHECKERRNE(buffer, NULL, "Errore malloc: ");
    
-
-   int fd_skt, fd_c, err;
-   struct sockaddr_un sa;
-   strncpy(sa.sun_path, SOCKNAME, UNIX_PATH_MAX);
-   sa.sun_family = AF_UNIX;
-
-   //int justRead;
-   // int bytesRead = 0;
-
-   fd_skt = socket(AF_UNIX, SOCK_STREAM, 0);
-   CHECKERRSC(fd_skt, -1, "Errore socket: ");
-   printf("fd skt: %d\n", fd_skt);
-   err = bind(fd_skt, (struct sockaddr *)&sa, sizeof(sa));
-   CHECKERRSC(err, -1, "Errore bind: ");
-   err = listen(fd_skt, SOMAXCONN);
-   CHECKERRSC(err, -1, "Errore listen: ");
-   fd_c = accept(fd_skt, NULL, 0);
-   CHECKERRSC(err, -1, "Errore accept: ");
-
-   printf("conness accettata\n");
-
-   /// prima si bloccava qua prova a vedere senza printf
-
-   //inizializzo la coda delle richieste
-   ServerRequest *reqs = NULL;
-
-   ServerRequest *req = malloc(sizeof(ServerRequest));
-
-   //leggo la richiesta
-   readRequest(fd_c, req);
-
-   //controllo che la richiesta non sia di chiusura
-
-   if (req->op == Close)
-   {
-      //rimuovi file descriptor del client e chiude la connessione
-   }
-   else{
-
-      //aggiungo la richiesta alla coda
-      addRequest(&reqs, req);
-
-      printf("req: %d\n", req->op);
-      printf("req: %d\n", req->dim);
-      printf("req: %d\n", req->flags);
-      printf("req: %d\n", req->nameLenght);
-      printf("req: %s\n", req->fileName);
-
-      // che verrà processata poi dai thread worker
-   }
-   err = readn(fd_c, buffer, N);
-   CHECKERRE(err, -1, "readn failed");
-
-   writen(fd_c, buffer, N);
-
-   freeRequests(&reqs);
-
-
-   close(fd_skt);
-   free(buffer);
-   //free(name);
-
-   return 0;*/
 }

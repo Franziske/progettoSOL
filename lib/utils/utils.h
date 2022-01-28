@@ -74,7 +74,7 @@ typedef struct serverRequest_t
  *
  *   \retval -1   errore (errno settato)
  *   \retval  0   se durante la lettura da fd leggo EOF
- *   \retval size se termina con successo
+ *   \retval 1    se termina con successo
  */
 static inline int readn(long fd, void* buf, size_t size) {
     size_t left = size;
@@ -89,7 +89,7 @@ static inline int readn(long fd, void* buf, size_t size) {
         left -= r;
         bufptr += r;
     }
-    return size;
+    return 1;
 }
 
 /** Evita scritture parziali

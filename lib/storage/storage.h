@@ -24,12 +24,14 @@ typedef struct file_t{
 
 int storageInit(int c,int m);
 
-int OpenInStorage();
-int CloseInStorage();
-int WriteInStorage();
+int OpenInStorage(char* name, int dim, int flags, int fd);
+int CloseInStorage(char* name, int fd) ;
+int WriteInStorage(char* name, int dim, int flags, int fd) ;
 int ReadFromStorage();
 int LockInStorage();
 int DeleteFromStorage();
 int UnlockInStorage();
+
+int freeStorage();
 
 #endif

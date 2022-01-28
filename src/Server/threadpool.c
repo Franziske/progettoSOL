@@ -2,8 +2,9 @@
 #include "threadpool.h"
 
 
-int readRequest (int fd_c, ServerRequest* req)//(int *op, int *dim, int *nameLen, char **name, int* flags, int fd_c, ServerRequest *req)
-{
+
+
+int readRequest (int fd_c, ServerRequest* req){
    int op = 0, dim = 0, nameLen = 0, flags = -1;
    void *name = NULL;
    int err;
@@ -52,6 +53,24 @@ Client* getRequest(Threadpool* pool){
 
     while ((pool->queue) == NULL) {
 
+        //se ho finito le richieste in sospeso e devo terminare
+        //invio il segnale per il server sulla pipe e restituisco null al worker
+
+        if(pool->termSig == 2 || pool->termSig== 3){
+            pthread_mutex_unlock(&(pool->lock));
+
+            int endOfReqSig = -1;
+            write(pool->fdsPipe, &endOfReqSig, sizeof(int));
+            return NULL;
+        }
+
+        //???????????
+        
+        if(pool->termSig == 1){
+            int endOfReqSig = -1;
+            write(pool->fdsPipe, &endOfReqSig, sizeof(int));
+        }
+        //altrimenti mi metto in attesa 
         printf("un worker aspetta la req \n");
         pthread_cond_wait(&(pool->cond), &(pool->lock));          
     }
@@ -86,14 +105,6 @@ int addToQueue(Threadpool *pool, int arg){
         errno = EINVAL;
         return -1;
     }
-
-
-    //LOCK_RETURN(&(pool->lock), -1);
-    /*if (pool->exiting)
-    {
-        UNLOCK_RETURN(&(pool->lock), -1);
-        return 1; // esco con valore errore
-    }*/
     printf("sono nella add to queue \n");
 
     Client* fdReq = malloc(sizeof(Client));
@@ -102,7 +113,17 @@ int addToQueue(Threadpool *pool, int arg){
 
     pthread_mutex_lock(&(pool->lock));
 
-    pool->tail = addClient(&(pool->queue), fdReq);
+    if(pool->queue == NULL){
+        pool->queue = fdReq;
+        pool->tail = fdReq;
+    }
+    else{
+        pool->tail->nextC = fdReq;
+        pool->tail = fdReq;
+
+    }
+
+    pool->count ++;
 
     int r;
     if ((r = pthread_cond_signal(&(pool->cond))) != 0)
@@ -130,13 +151,12 @@ static void* workerFun(void *threadpool){
     //controlla != NULL
 
      while (1) {
-       
         closeConn = 0;
         Client* c = getRequest(pool);
         if (c == NULL)
+        //la coda è vuota e devo terminare
             break;
         // leggo la richiesta fatta dal client c
-
         int fdC = c->fdC;
         ServerRequest *req = malloc(sizeof(ServerRequest));
 
@@ -151,6 +171,7 @@ static void* workerFun(void *threadpool){
             //controlla errori send
                 sendResponse(fdC,res);
                 int r = write(pool->fdsPipe, &fdC, sizeof(int));
+
                 //check write
             break;
 }
@@ -159,12 +180,15 @@ static void* workerFun(void *threadpool){
             //controlla errori send
                 sendResponse(fdC,res);
                 int r = write(pool->fdsPipe, &fdC, sizeof(int));
+                free(req->fileName);
                 //check write
             break;
         }
          case W : {
            res = WriteInStorage(req->fileName, req->dim, req->flags,req->client);
             printf("risultato Write in storage: %d\n", res);
+            int r = write(pool->fdsPipe, &fdC, sizeof(int));
+            free(req->fileName);
             break;
         }
          case R : {
@@ -201,6 +225,7 @@ static void* workerFun(void *threadpool){
         case CC : {
 
             printf("%s from client %d \n", req->fileName,req->client);
+            free(req->fileName);
             res = 0;
             closeConn = 1;
         }
@@ -212,13 +237,15 @@ static void* workerFun(void *threadpool){
 
        
         printf(" scrivo su pipe %d fdc: %d\n", pool->fdsPipe, fdC);
+        
+        free(c);
         free(req);
 
         if(closeConn == 1) close(fdC);
 
      }
 
-     //scrivi fd su pipe per comunicare al master di ri mettersi in ascolto
+    
 
 return NULL;
 
@@ -244,6 +271,7 @@ Threadpool *createThreadPool(int nWorker, int fd){
     pool->tail = NULL;
     pool->count = 0;
     pool->fdsPipe = fd;
+    pool->termSig = 0;
 
     /* Allocate thread and task queue */
     pool->threads = malloc(sizeof(pthread_t) * nWorker);
@@ -269,7 +297,7 @@ Threadpool *createThreadPool(int nWorker, int fd){
                            workerFun, (void *)pool) != 0)
         {
             /* errore fatale, libero tutto forzando l'uscita dei threads */
-            destroyThreadPool(pool, 1);
+            destroyThreadPool(pool);
             errno = EFAULT;
             return NULL;
         }
@@ -278,24 +306,61 @@ Threadpool *createThreadPool(int nWorker, int fd){
     return pool;
 }
 
+int terminationProtocol(Threadpool *pool,int signal){
+      if (pool == NULL || signal < 0)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    pthread_mutex_lock(&(pool->lock));
+    
+    pool->termSig = signal;
 
-int destroyThreadPool(Threadpool *pool, int sig){
+    pthread_mutex_unlock(&(pool->lock));
+    return 0;
+}
 
-    /*switch (sig){
-     //SIGINT e SIGQUIT
-    case 2: 
-    case 3:{
-        
-        break;
+
+int destroyThreadPool(Threadpool *pool){
+
+     if (pool == NULL){
+        errno = EINVAL;
+        return -1;
     }
 
-    //SIGHUP
-    case 1:{
-        
-        break;
+    pthread_mutex_lock (&(pool->lock));
+
+    printf("sto deallocando threadpool\n");
+
+    //forse prima devo fare la join dei thread
+
+    if (pthread_cond_broadcast(&(pool->cond)) != 0){
+        pthread_mutex_unlock (&(pool->lock));
+        errno = EFAULT;
+        return -1;
     }
-    default:
-        break;
-    }*/
+    pthread_mutex_unlock (&(pool->lock));
+
+    for (int i = 0; i < pool->nWorker; i++){
+        if (pthread_join(pool->threads[i], NULL) != 0){
+            errno = EFAULT;
+            pthread_mutex_unlock (&(pool->lock));
+            return -1;
+        }
+    }
+
+     if (pool->threads){
+        free(pool->threads);
+        free(pool->queue);
+
+        printf("sto deallocando threadpool  1\n");
+
+        pthread_mutex_destroy(&(pool->lock));
+        pthread_cond_destroy(&(pool->cond));
+    }
+    printf("sto deallocando threadpool  1\n");
+    freeStorage();
+    free(pool);
+    
     return 0;
 }

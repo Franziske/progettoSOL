@@ -18,13 +18,15 @@ typedef struct threadpool_t {
     Client *queue;      // coda interna per client che hanno inviato una richiesta
     Client *tail;           // riferimenti della coda
     int nWorker;           // numero di thread (size dell'array threads)
-    int count;                // numero di task nella coda dei task pendenti
+    int count;                // numero di richieste 
+    int termSig;        //segnale di terminazione
     int fdsPipe;
 } Threadpool;
 
 Threadpool* createThreadPool(int nWorker, int fd);
-int destroyThreadPool(Threadpool *pool, int force);
-//int addRequestToPool(Threadpool *pool, ServerRequest* req) ;
+int terminationProtocol(Threadpool *pool,int signal);
+int destroyThreadPool(Threadpool *pool);
+
 int addToQueue(Threadpool *pool, int arg);
 
 
