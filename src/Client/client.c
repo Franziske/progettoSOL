@@ -211,19 +211,36 @@ int main(int argc, char* const* argv){
             case 'R': {
                 
                 Request* req = malloc(sizeof(Request));
+
+                printf("caso R\n");
                 req->op = Read;
                 req->files = NULL;
                 req->filesNumber = 0;
                 req->dirFrom = NULL;
                 req->n = 0;
                 // se presente faccio il parsing di n
-                strtok_r(optarg, ",", &optarg);
+              
+                char* args = optarg;
+                char*parsedN = strtok_r(args, ",", &args);
+                if (parsedN != NULL && parsedN[0] == '='){
+                req->n = atoi(parsedN + 1);
+                }
+
+                
+                else{
+                    fprintf(stderr, "richiestra read malformata ");
+                    exit(EXIT_FAILURE);
+                }
+
+                /*strtok_r(optarg, ",", &optarg);
                 if (optarg != NULL)
-                     req->n = (size_t) atoi(optarg);
+                     req->n =  atoi(optarg);*/
 
                     //req->n = strtok_r(optarg, ",", &optarg);
                 req->dirTo = NULL;
                 req->next = NULL;
+
+                printf("n parsed = %d\n", req->n);
                 addRequest(&reqs, req);
                 break;
             }
@@ -322,7 +339,7 @@ int main(int argc, char* const* argv){
 
     while(aux!=NULL){
         printf("richiesta: %d\n", aux->op);
-        printf("richiesta su : %s\n", aux->files->name);
+        //printf("richiesta su : %s\n", aux->files->name);
 
         aux = aux->next;
         
@@ -352,8 +369,9 @@ int main(int argc, char* const* argv){
 
             case Write:{
 
-                CHECKERRE(reqs->files,NULL,"Richiesta writwFile malformata");
-                CHECKERRE(reqs->files->name,NULL,"Richiesta writeFile malformata");
+                //posso avere n invece che il nome del file
+               // CHECKERRE(reqs->files,NULL,"Richiesta writeFile malformata\n");
+                //CHECKERRE(reqs->files->name,NULL,"Richiesta writeFile malformata\n");
             
                 result = 0;
                 for (size_t i = 0; i < reqs->filesNumber; i++){  
@@ -386,24 +404,35 @@ int main(int argc, char* const* argv){
 
             case Read:{
 
-                CHECKERRE(reqs->files,NULL,"Richiesta readFile malformata");
-                CHECKERRE(reqs->files->name,NULL,"Richiesta readFile malformata");
-            
-                for (size_t i = 0; i < reqs->filesNumber; i++){  
-                    result = 0;
-                    aux_p = reqs->files;
-                    int flags = 3;
-                    void* buffer = NULL;
-                    size_t dim;
-                    result = openFile(aux_p->name, flags);
-                    CHECKERRSC(result, -1, "Errore openFile: ");
+                //CHECKERRE(reqs->files,NULL,"Richiesta readFile malformata");
+                //CHECKERRE(reqs->files->name,NULL,"Richiesta readFile malformata");
+                if(reqs->files == NULL && reqs->n <0){
+                     fprintf(stderr, "richiestra read malformata ");
+                    exit(EXIT_FAILURE);
+                }
+                if(reqs->files != NULL){
+                    for (size_t i = 0; i < reqs->filesNumber; i++){  
                         result = 0;
-                    result = readFile(aux_p->name, buffer, &dim);
-                    CHECKERRSC(result, -1, "Errore readFile: ");
-                        result = 0;
-                    result = closeFile(aux_p->name);
-                    CHECKERRSC(result, -1, "Errore closeFile: ");
-                    aux_p= aux_p->nextString;
+                        aux_p = reqs->files;
+                        int flags = 3;
+                        void* buffer = NULL;
+                        size_t dim;
+                        result = openFile(aux_p->name, flags);
+                        CHECKERRSC(result, -1, "Errore openFile: ");
+                            result = 0;
+                        result = readFile(aux_p->name, buffer, &dim);
+                        CHECKERRSC(result, -1, "Errore readFile: ");
+                            result = 0;
+                        result = closeFile(aux_p->name);
+                        CHECKERRSC(result, -1, "Errore closeFile: ");
+                        aux_p= aux_p->nextString;
+                    }
+                }
+                else{
+                    if(reqs->n > 0){
+                        readNFiles(reqs->n, reqs->dirTo);
+                         CHECKERRSC(result, -1, "Errore readNFile: ");
+                    }
                 }
 
             /* if(reqs->filesNumber != 0){

@@ -192,7 +192,7 @@ static void* workerFun(void *threadpool){
             break;
         }
          case R : {
-            res = ReadFromStorage(req->fileName, req->client);
+            res = ReadFromStorage(req->fileName,req->flags, req->client);
             break;
         }
          case L :{

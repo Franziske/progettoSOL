@@ -412,32 +412,69 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
 
   // aggiungo file
 }
-int ReadFromStorage(char* name, int fd) {
+int ReadFromStorage(char* name, int flags, int fd) {
   // controllo che il file esista
 
-  File* f = findFile(name);
-  if (f == NULL) {
-    pthread_mutex_unlock(&(f->mutex));
-    return -1;
+  if(flags == 0){
+    File* f = findFile(name);
+    if (f == NULL) {
+      pthread_mutex_unlock(&(f->mutex));
+      return -1;
+    }
+
+    // il file è esplicitamente lockato da fd
+    if (f->lock == fd) {
+      int res = sendFile(f, fd);
+      pthread_mutex_unlock(&(f->mutex));
+      return res;
+    }
+
+    // pthread_mutex_lock(&(f->mutex));
+    if (f->lock == -1) {
+      int res = sendFile(f, fd);
+
+      pthread_mutex_unlock(&(f->mutex));
+      return res;
+    }
+
+    // invalid operation file locked
+    return -3;
+
   }
+  //altrimenti il valore di flags è il numero che viene richiesto di file da leggere 
+  int actualN;        // numero di file realmente inviati al client
 
-  // il file è esplicitamente lockato da fd
-  if (f->lock == fd) {
-    int res = sendFile(f, fd);
-    pthread_mutex_unlock(&(f->mutex));
-    return res;
+
+  pthread_mutex_lock(&(storageMutex));
+  if(flags > currNFile) actualN = currNFile;
+
+  File* aux = storageHead;
+
+  for (size_t i = 0; i <actualN; i++){
+    pthread_mutex_lock(&(aux->mutex));
+     if (aux->lock == fd) {
+      int res = sendFile(aux, fd);
+      pthread_mutex_unlock(&(aux->mutex));
+      return res;
+    }
+
+    // pthread_mutex_lock(&(f->mutex));
+    if (aux->lock == -1) {
+      int res = sendFile(aux, fd);
+
+      pthread_mutex_unlock(&(aux->mutex));
+      return res;
+    }
+
+    // invalid operation file locked
+    return -3;
+
   }
+  
 
-  // pthread_mutex_lock(&(f->mutex));
-  if (f->lock == -1) {
-    int res = sendFile(f, fd);
 
-    pthread_mutex_unlock(&(f->mutex));
-    return res;
-  }
 
-  // invalid operation file locked
-  return -3;
+
 }
 int LockInStorage(char* name, int fd) {
   // controllo il flag di lock o lo setto o mi metto in coda
