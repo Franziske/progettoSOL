@@ -27,23 +27,19 @@ static char* sock;
 // funzione che invia al server le informazioni relative ad una richiesta
 
 int sendRequest(serverOperation op, int dim, const char* name, int flags) {
-  printf("sending request\n");
 
   if (writen(fdSkt, (int*)&op, sizeof(int)) == -1) return -1;
-  printf("inviato : %d\n", op);
 
   if (writen(fdSkt, (int*)&dim, sizeof(int)) == -1) return -1;
-  printf("inviato : %d\n", (int)dim);
 
   if (writen(fdSkt, &flags, sizeof(int)) == -1) return -1;
-  printf("inviato : %d\n", flags);
-  if(name != NULL){
-  size_t len = strlen(name) + 1;
-  if (writen(fdSkt, (int*)&len, sizeof(int)) == -1) return -1;
-  printf("inviato : %ld\n", len);
-  
-
-  return writen(fdSkt, (void*)name, len * sizeof(char));
+  printf("sending request\n");
+  printf("inviato -> op=%d\tdim=%d flags=%d\n", op, dim, flags);
+  if (name != NULL) {
+    int len = strlen(name) + 1;
+    if (writen(fdSkt, &len, sizeof(int)) == -1) return -1;
+    printf("tento di inviare stringa %s di len %d\n",name,  len);
+    return writen(fdSkt, (void*)name, len);
   }
   return 0;
 }
@@ -115,6 +111,7 @@ int receiveAndSaveFile(const char* dirname) {
     return -1;
   }
 
+  if(dirname != NULL){
   int pathLen = (strlen(dirname) + nameLen) * sizeof(char) + 1;
 
   char* path = malloc(pathLen);
@@ -133,9 +130,11 @@ int receiveAndSaveFile(const char* dirname) {
   free(buffer);
   free(name);
   free(path);
+  }
 
   return 0;
 }
+
 // legge il contenuto del file fileName e lo scrive in buffer
 // restituisce il numero di bytes letti
 int getFile(void** buffer, const char* fileName) {
@@ -322,10 +321,10 @@ memorizzati al suo interno. Ritorna un valore maggiore o uguale a 0 in caso di
 successo (cioè ritorna il n. di file effettivamente letti), -1 in caso di
 fallimento, errno viene settato opportunamente.*/
 int readNFiles(int N, const char* dirname) {
- /* if (dirname == NULL) {
-    errno = EINVAL;
-    return -1;
-  }*/
+  /* if (dirname == NULL) {
+     errno = EINVAL;
+     return -1;
+   }*/
 
   int res = sendRequest(R, 0, "", N);
   printf("richiesta inviata\n");

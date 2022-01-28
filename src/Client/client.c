@@ -435,7 +435,7 @@ int main(int argc, char* const* argv){
                 else{
                     if(reqs->n > 0){
                         printf("richiesta lettura n files\n");
-                        readNFiles(reqs->n, reqs->dirTo);
+                        result = readNFiles(reqs->n, reqs->dirTo);
                          CHECKERRSC(result, -1, "Errore readNFile: ");
                     }
                 }

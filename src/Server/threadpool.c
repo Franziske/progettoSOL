@@ -9,31 +9,26 @@ int readRequest (int fd_c, ServerRequest* req){
    void *name = NULL;
    int err;
    err = readn(fd_c, &op, sizeof(int));
-   printf("ricevuto : %d\n", op);
    CHECKERRE(err, -1, "readn failed");
 
    //printf("readn = %d \n",readn(fd_c,&dim, sizeof(int)));
    err = readn(fd_c, &dim, sizeof(int));
    CHECKERRE(err, -1, "readn failed");
-   printf("ricevuto : %d\n", dim);
 
    err = readn(fd_c, &flags, sizeof(int));
    CHECKERRE(err, -1, "readn failed");
-   printf("ricevuto : %d\n", flags);
 
    err = readn(fd_c, &nameLen, sizeof(int));
 
   // printf(" risultato readn lunghezza nome : %d \n", nameLen);
    CHECKERRE(err, -1, "readn failed");
-   printf("ricevuto : %d\n", nameLen);
-
    name = malloc(nameLen);
 
    err = readn(fd_c, name, nameLen);
    CHECKERRE(err, -1, "readn failed");
 
-   printf("ricevuto: %d,%d,%d\n", op, dim, nameLen);
-   printf("ricevuto: %s\n",(char*)name);
+   printf("ricevuto -> op=%d\tdim=%d nameLen=%d\n", op, dim, nameLen);
+   printf("ricevuto: name=%s\n",(char*)name);
 
    req->op = (Operation)op;
    req->dim = dim;
@@ -180,7 +175,7 @@ static void* workerFun(void *threadpool){
             //controlla errori send
                 sendResponse(fdC,res);
                 int r = write(pool->fdsPipe, &fdC, sizeof(int));
-                free(req->fileName);
+                
                 //check write
             break;
         }
@@ -188,7 +183,6 @@ static void* workerFun(void *threadpool){
            res = WriteInStorage(req->fileName, req->dim, req->flags,req->client);
             printf("risultato Write in storage: %d\n", res);
             int r = write(pool->fdsPipe, &fdC, sizeof(int));
-            free(req->fileName);
             break;
         }
          case R : {
