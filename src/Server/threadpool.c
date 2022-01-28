@@ -193,6 +193,8 @@ static void* workerFun(void *threadpool){
         }
          case R : {
             res = ReadFromStorage(req->fileName,req->flags, req->client);
+            int r = write(pool->fdsPipe, &fdC, sizeof(int));
+            free(req->fileName);
             break;
         }
          case L :{

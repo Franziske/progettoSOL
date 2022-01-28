@@ -209,6 +209,8 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
     f->open = NULL;
     f->nextFile = NULL;
     f->buff = NULL;
+
+    currNFile ++;
     if (pthread_mutex_init(&f->mutex, NULL) != 0) {
       freeFile(f);
       return -4;
@@ -280,15 +282,30 @@ int CloseInStorage(char* name, int fd) {
 
   File* f = findFile(name);
   if (f == NULL) {
-    // pthread_mutex_unlock(&(f->mutex));
+    //pthread_mutex_unlock(&(f->mutex));
     printf("il file non esiste \n");
     return -1;
   }
   // controllo che sia stata effettuata prima una open dal client c
-  // pthread_mutex_lock(&(f->mutex));
+  pthread_mutex_lock(&(f->mutex));
 
   printf("chiudo il file \n");
   int res = removeClient(&(f->open), fd);
+
+  if(f->lock == fd){
+   if (f->lockReqs == NULL) {
+    f->lock = -1;
+    pthread_mutex_unlock(&(f->mutex));
+    return 0;
+  }
+
+  f->lock = f->lockReqs->fdC;
+  Client* aux = f->lockReqs;
+  f->lockReqs = f->lockReqs->nextC;
+  free(aux);
+  pthread_mutex_unlock(&(f->mutex));
+  }
+
   pthread_mutex_unlock(&(f->mutex));
 
   return res;
@@ -415,10 +432,11 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
 int ReadFromStorage(char* name, int flags, int fd) {
   // controllo che il file esista
 
+
   if(flags == 0){
     File* f = findFile(name);
     if (f == NULL) {
-      pthread_mutex_unlock(&(f->mutex));
+      //pthread_mutex_unlock(&(f->mutex));
       return -1;
     }
 
@@ -445,16 +463,26 @@ int ReadFromStorage(char* name, int flags, int fd) {
   int actualN;        // numero di file realmente inviati al client
 
 
-  pthread_mutex_lock(&(storageMutex));
+ // pthread_mutex_lock(&(storageMutex));
+
+  if(currNFile == 0){
+    int r = 0;
+    sendResponse(fd, r);
+    return 0;
+  }
   if(flags > currNFile) actualN = currNFile;
+  else{
+    actualN = flags;
+  }
+  
 
   File* aux = storageHead;
 
   for (size_t i = 0; i <actualN; i++){
-    pthread_mutex_lock(&(aux->mutex));
+    //pthread_mutex_lock(&(aux->mutex));
      if (aux->lock == fd) {
       int res = sendFile(aux, fd);
-      pthread_mutex_unlock(&(aux->mutex));
+      //pthread_mutex_unlock(&(aux->mutex));
       return res;
     }
 

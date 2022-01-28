@@ -37,12 +37,15 @@ int sendRequest(serverOperation op, int dim, const char* name, int flags) {
 
   if (writen(fdSkt, &flags, sizeof(int)) == -1) return -1;
   printf("inviato : %d\n", flags);
-
+  if(name != NULL){
   size_t len = strlen(name) + 1;
   if (writen(fdSkt, (int*)&len, sizeof(int)) == -1) return -1;
   printf("inviato : %ld\n", len);
+  
 
   return writen(fdSkt, (void*)name, len * sizeof(char));
+  }
+  return 0;
 }
 
 int receiveResponse() {
@@ -319,12 +322,13 @@ memorizzati al suo interno. Ritorna un valore maggiore o uguale a 0 in caso di
 successo (cioè ritorna il n. di file effettivamente letti), -1 in caso di
 fallimento, errno viene settato opportunamente.*/
 int readNFiles(int N, const char* dirname) {
-  if (dirname == NULL) {
+ /* if (dirname == NULL) {
     errno = EINVAL;
     return -1;
-  }
+  }*/
 
-  int res = sendRequest(R, N, NULL, 0);
+  int res = sendRequest(R, 0, "", N);
+  printf("richiesta inviata\n");
   if (res == -1) {
     errno = ECOMM;
     return -1;

@@ -84,6 +84,8 @@ Request* checkLastOp(Request* list, Operation op){
 
 void addRequest(Request** list, Request* newReq){
 
+    printf("aggiungendo la richiesta\n");
+
     if( (*list) == NULL){
         *list = newReq;
     }
@@ -404,6 +406,8 @@ int main(int argc, char* const* argv){
 
             case Read:{
 
+                printf("Richiesta read\n");
+
                 //CHECKERRE(reqs->files,NULL,"Richiesta readFile malformata");
                 //CHECKERRE(reqs->files->name,NULL,"Richiesta readFile malformata");
                 if(reqs->files == NULL && reqs->n <0){
@@ -430,17 +434,11 @@ int main(int argc, char* const* argv){
                 }
                 else{
                     if(reqs->n > 0){
+                        printf("richiesta lettura n files\n");
                         readNFiles(reqs->n, reqs->dirTo);
                          CHECKERRSC(result, -1, "Errore readNFile: ");
                     }
                 }
-
-            /* if(reqs->filesNumber != 0){
-                    //caso r
-                }
-                else{
-                    //caso R
-                }*/
 
             break;
             }
