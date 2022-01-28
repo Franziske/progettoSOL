@@ -2,3 +2,4 @@ bin/*
 obj/*
 *.o
 configs/config.ini
+*.pid

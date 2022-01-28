@@ -39,12 +39,14 @@ server: ini utils threadpool storage
 test_server: clean all
 	valgrind -s --leak-check=full --show-leak-kinds=all  bin/server.out configs/config.ini
 
-test1:
+test1: all
+	valgrind -s --leak-check=full --show-leak-kinds=all  bin/server.out configs/config1.ini & echo "$$!" > "server.pid"
 	./scripts/test_1.sh
- 
+	cat server.pid | xargs kill -1
+
 clean:
 	@echo Clean
-	-rm -rf $(OBJ)/* $(BIN)/* mysock
+	-rm -rf $(OBJ)/* $(BIN)/* mysock *.pid
 	@echo Done
 
 c: clean
