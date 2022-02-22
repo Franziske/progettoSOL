@@ -228,6 +228,8 @@ int openConnection(const char* sockname, int msec,
   }
 
   printf("file descriptor %d \n", fdSkt);
+
+  free(sock);
   return fdSkt;
 }
 
@@ -368,7 +370,7 @@ int writeFile(const char* pathname, const char* dirname) {
     return -1;
   }
   res = sendFile(buffer, bytesRead);
-  printf("file inviato byte letti %d  e res = %ld\n", bytesRead, res);
+  printf("file inviato byte letti %d  e res = %d\n", bytesRead, res);
   if (res == -1) {
     errno = ECOMM;
     return -1;

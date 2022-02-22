@@ -205,6 +205,7 @@ int main(int argc, char* const* argv){
                 req->files = NULL;
                 //aggiorno il numero di file e la lista con i files
                 req->filesNumber = getList(optarg, &(req->files)); 
+                printf("req -> files number : %ld", req->filesNumber);
                 req->n = 0;
                 req->next = NULL;
                 addRequest(&reqs, req);
@@ -242,7 +243,7 @@ int main(int argc, char* const* argv){
                 req->dirTo = NULL;
                 req->next = NULL;
 
-                printf("n parsed = %d\n", req->n);
+                printf("n parsed = %ld\n", req->n);
                 addRequest(&reqs, req);
                 break;
             }
@@ -307,7 +308,7 @@ int main(int argc, char* const* argv){
                 aux = checkLastOp(reqs,Read);
                 CHECKERRE(aux ,NULL,
                          "Richiesta mal formata: -d non preceduta da una lettura");
-                aux->dirTo = optarg; ///STRINGCOPY?????
+                aux->dirTo = optarg;
 
                 break;
             case 'D':
@@ -315,7 +316,7 @@ int main(int argc, char* const* argv){
                  aux = checkLastOp(reqs,Write);
                 CHECKERRE(aux ,NULL,
                          "Richiesta mal formata: -D non preceduta da una scrittura");
-                aux->dirTo = optarg; ///STRINGCOPY?????
+                aux->dirTo = optarg;
                 
                 break;
             
@@ -371,13 +372,21 @@ int main(int argc, char* const* argv){
 
             case Write:{
 
+                  string* prova = reqs->files;
+
+                while(prova != NULL){
+                    printf("%s\n", prova->name);
+                    prova = prova->nextString;
+
+                }
                 //posso avere n invece che il nome del file
                // CHECKERRE(reqs->files,NULL,"Richiesta writeFile malformata\n");
                 //CHECKERRE(reqs->files->name,NULL,"Richiesta writeFile malformata\n");
             
                 result = 0;
+                aux_p = reqs->files;
                 for (size_t i = 0; i < reqs->filesNumber; i++){  
-                    aux_p = reqs->files;
+                    
                     int flags = 3;
                     result = 0;
                     result = openFile(aux_p->name, flags);
@@ -391,6 +400,8 @@ int main(int argc, char* const* argv){
                     CHECKERRSC(result, -1, "Errore closeFile: ");
                     aux_p = aux_p->nextString;
                 }
+
+                freeStringList(reqs->files);
             
                 /*if(reqs->dirFrom != NULL){
                     // caso W
@@ -410,10 +421,11 @@ int main(int argc, char* const* argv){
 
                 //CHECKERRE(reqs->files,NULL,"Richiesta readFile malformata");
                 //CHECKERRE(reqs->files->name,NULL,"Richiesta readFile malformata");
-                if(reqs->files == NULL && reqs->n <0){
+                if(reqs->files == NULL){
                      fprintf(stderr, "richiestra read malformata ");
                     exit(EXIT_FAILURE);
                 }
+              
                 if(reqs->files != NULL){
                     for (size_t i = 0; i < reqs->filesNumber; i++){  
                         result = 0;

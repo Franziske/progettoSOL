@@ -376,6 +376,9 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
   // LOCK(&(storageMutex));
   printf("post lock storageMutex\n");
 
+  // se sforerei la cxapacità massima o il numero masiimo di file nello storage
+  //seleziono i file vittima da rimuovere
+
   if (currMem + dim > capacity || currNFile == max) {
     victims = FindVictims(currMem + dim - capacity, fd, &victimsCount);
   }
@@ -390,7 +393,7 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
   // CHECKERRE(err, -1, "Errore writen: ");
 
   if (flags == 1) {
-    // invio i file vittima e li cancello dal
+    // invio i file vittima e li cancello dallo storage
 
     while (victims != NULL) {
       File* aux = victims;
@@ -400,6 +403,8 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
       if ((err = sendFile(aux, fd)) < 1) return err;
 
       victims = victims->nextFile;
+      currMem = currMem - aux->dim;
+      currNFile = currNFile - 1;
       freeFile(aux);
     }
 
@@ -418,10 +423,11 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
     }
   }
 
-  printf("DIMENSIONE FILE %d \n", f->dim);
+ 
 
   f->dim = dim;
   f->buff = buff;
+   printf("DIMENSIONE FILE %d \n", f->dim);
   return 0;
 
   // controlla res
@@ -480,7 +486,7 @@ int ReadFromStorage(char* name, int flags, int fd) {
 
   printf("storage head name %s\n", aux->name);
 
-  for (size_t i = 0; i < actualN; i++) {
+  for (int i = 0; i < actualN; i++) {
     //_pthread_mutex_lock(&(aux->mutex));
     if (aux->lock == fd) {
       int res = sendFile(aux, fd);

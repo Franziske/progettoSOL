@@ -23,7 +23,7 @@ typedef enum
 //possibili operazioni lette dal server
 
 typedef enum{
-    OF,     //Open a file
+    OF = 1,     //Open a file
     CF,     //Close a file
     W,      //Write a file
     R,      //Read a file
