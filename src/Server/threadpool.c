@@ -79,14 +79,14 @@ Client *getRequest(Threadpool *pool) {
   return c;
 }
 
-void freeRequests(Client **list) {
+/*void freeRequests(Client **list) {
   Client *aux;
   while (*list != NULL) {
     aux = *list;
     *list = aux->nextC;
     free(aux);
   }
-}
+}*/
 
 int addToQueue(Threadpool *pool, int arg) {
   if (pool == NULL || arg < 2) {
@@ -166,6 +166,7 @@ static void *workerFun(void *threadpool) {
         // controlla errori send
         sendResponse(fdC, res);
         int r = write(pool->fdsPipe, &fdC, sizeof(int));
+        free(req->fileName);
 
         // check write
         break;
@@ -174,6 +175,7 @@ static void *workerFun(void *threadpool) {
         res = WriteInStorage(req->fileName, req->dim, req->flags, req->client);
         printf("risultato Write in storage: %d\n", res);
         int r = write(pool->fdsPipe, &fdC, sizeof(int));
+        free(req->fileName);
         break;
       }
       case R: {
@@ -320,12 +322,12 @@ int destroyThreadPool(Threadpool *pool) {
     free(pool->threads);
     free(pool->queue);
 
-    printf("sto deallocando threadpool  1\n");
+    printf("sto deallocando threadpool  \n");
 
     pthread_mutex_destroy(&(pool->lock));
     pthread_cond_destroy(&(pool->cond));
   }
-  printf("sto deallocando threadpool  1\n");
+  printf("sto deallocando threadpool  \n");
   freeStorage();
   free(pool);
 

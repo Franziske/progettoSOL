@@ -372,7 +372,7 @@ int main(int argc, char* const* argv){
 
             case Write:{
 
-                  string* prova = reqs->files;
+                string* prova = reqs->files;
 
                 while(prova != NULL){
                     printf("%s\n", prova->name);
@@ -401,7 +401,7 @@ int main(int argc, char* const* argv){
                     aux_p = aux_p->nextString;
                 }
 
-                freeStringList(reqs->files);
+                freeStringList(&(reqs->files));
             
                 /*if(reqs->dirFrom != NULL){
                     // caso W
