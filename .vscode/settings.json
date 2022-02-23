@@ -2,6 +2,14 @@
     "files.associations": {
         "socket.h": "c",
         "type_traits": "cpp",
-        "typeinfo": "c"
+        "typeinfo": "c",
+        "optional": "c",
+        "istream": "c",
+        "ostream": "c",
+        "system_error": "c",
+        "array": "c",
+        "functional": "c",
+        "tuple": "c",
+        "utility": "c"
     }
 }

@@ -114,13 +114,13 @@ int sendFile(File* f, int fd) {
   nameLen = strlen(f->name) + 1;
 
   res = writen(fd, &nameLen, sizeof(int));
-  if (res == -1) return -5;
+  if (res == -1) return 4;
   res = writen(fd, &(f->dim), sizeof(int));
-  if (res == -1) return -5;
+  if (res == -1) return -4;
   res = writen(fd, f->name, nameLen);
-  if (res == -1) return -5;
+  if (res == -1) return -4;
   res = writen(fd, f->buff, f->dim);
-  if (res == -1) return -5;
+  if (res == -1) return -4;
 
   return 0;
 }
@@ -329,9 +329,9 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
 
   if (dim > capacity) {
     free(buff);
-    int r = -6;
+    int r = -5;
     sendResponse(fd, r);
-    return -6;
+    return -5;
   }
 
   // controllo che sia stata effetuata open con create e lock flags

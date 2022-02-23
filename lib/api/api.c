@@ -27,7 +27,6 @@ static char* sock;
 // funzione che invia al server le informazioni relative ad una richiesta
 
 int sendRequest(serverOperation op, int dim, const char* name, int flags) {
-
   if (writen(fdSkt, (int*)&op, sizeof(int)) == -1) return -1;
 
   if (writen(fdSkt, (int*)&dim, sizeof(int)) == -1) return -1;
@@ -38,7 +37,7 @@ int sendRequest(serverOperation op, int dim, const char* name, int flags) {
   if (name != NULL) {
     int len = strlen(name) + 1;
     if (writen(fdSkt, &len, sizeof(int)) == -1) return -1;
-    printf("tento di inviare stringa %s di len %d\n",name,  len);
+    printf("tento di inviare stringa %s di len %d\n", name, len);
     return writen(fdSkt, (void*)name, len);
   }
   return 0;
@@ -50,7 +49,7 @@ int receiveResponse() {
   err = readn(fdSkt, &res, sizeof(int));
   printf("ricevuto : %d\n", res);
   CHECKERRE(err, -1, "Errore readn: ");
-  // CHECKRES(res, 0);
+
   return res;
 }
 /*int sendRequest(Operation op, int dim, const char *name, int flags, int fd){
@@ -111,25 +110,25 @@ int receiveAndSaveFile(const char* dirname) {
     return -1;
   }
 
-  if(dirname != NULL){
-  int pathLen = (strlen(dirname) + nameLen) * sizeof(char) + 1;
+  if (dirname != NULL) {
+    int pathLen = (strlen(dirname) + nameLen) * sizeof(char) + 1;
 
-  char* path = malloc(pathLen);
-  strcpy(path, dirname);
-  strcat(path, "/");
-  strcat(path, name);
-  path[pathLen - 1] = '\0';
+    char* path = malloc(pathLen);
+    strcpy(path, dirname);
+    strcat(path, "/");
+    strcat(path, name);
+    path[pathLen - 1] = '\0';
 
-  FILE* file = fopen(path, "w");
-  CHECKERRSC(file, NULL, "fopen failed");
+    FILE* file = fopen(path, "w");
+    CHECKERRSC(file, NULL, "fopen failed");
 
-  fwrite(buffer, 1, dim, file);
+    fwrite(buffer, 1, dim, file);
 
-  fclose(file);
+    fclose(file);
 
-  free(buffer);
-  free(name);
-  free(path);
+    free(buffer);
+    free(name);
+    free(path);
   }
 
   return 0;
@@ -223,14 +222,17 @@ int openConnection(const char* sockname, int msec,
   printf(" not Elapsed : %d \n", notElapsed);
   if (notElapsed == 0) {
     // timeout scaduto
-    fprintf(stderr, "Timeout scaduto durante la connessione");
+    // fprintf(stderr, "Timeout scaduto durante la connessione");
+    errno = ETIME;
+    perror("Timeout scaduto durante la connessione");
     exit(EXIT_FAILURE);
   }
 
   printf("file descriptor %d \n", fdSkt);
 
   free(sock);
-  return fdSkt;
+  // return fdSkt;
+  return 0;
 }
 
 /*Chiude la connessione AF_UNIX associata al socket file sockname. Ritorna 0 in
@@ -248,7 +250,10 @@ int closeConnection(const char* sockname) {
       return -1;
     }
     res = receiveResponse();
-    return close(fdSkt) && res;
+    if(close(fdSkt) == -1)return -1;
+    SETERRNO(res);
+    if(res < 0) return -1;
+    return 0;
   }
 }
 
@@ -276,7 +281,9 @@ int openFile(const char* pathname, int flags) {
     return -1;
   }
   res = receiveResponse();
-  return res;
+  SETERRNO(res);
+    if(res < 0) return -1;
+    return 0;
 
   /*if (res == 0) return 0;
   errno = EBUSY;
@@ -334,7 +341,10 @@ int readNFiles(int N, const char* dirname) {
     errno = ECOMM;
     return -1;
   }
-  res = receiveResponse();  // res in questo caso è il numero di file che invia
+  res = receiveResponse();  
+  SETERRNO(res);
+    if(res < 0) return -1;
+  // res in questo caso è il numero di file che invia
                             // il server
   for (int i = 0; i < res; i++) {
     if (receiveAndSaveFile(dirname) == -1) {
@@ -343,7 +353,7 @@ int readNFiles(int N, const char* dirname) {
     }
   }
 
-  return res;
+      return 0;
 }
 
 /*Scrive tutto il file puntato da pathname nel file server. Ritorna successo
@@ -377,7 +387,10 @@ int writeFile(const char* pathname, const char* dirname) {
   }
   free(buffer);
 
-  res = receiveResponse();  // res in questo caso è il numero di file che invia
+  res = receiveResponse(); 
+  SETERRNO(res);
+  if(res < 0) return -1;
+  // res in questo caso è il numero di file che invia
                             // il server
 
   if (dirname != NULL) {
@@ -421,7 +434,9 @@ int lockFile(const char* pathname) {
     return -1;
   }
   res = receiveResponse();
-  return res;
+  SETERRNO(res);
+  if(res < 0) return -1;
+  return 0;
 }
 
 /*Resetta il flag O_LOCK sul file ‘pathname’. L’operazione ha successo solo se
@@ -440,7 +455,9 @@ int unlockFile(const char* pathname) {
     return -1;
   }
   res = receiveResponse();
-  return res;
+  SETERRNO(res);
+  if(res < 0) return -1;
+  return 0;
 }
 
 /*Richiesta di chiusura del file puntato da ‘pathname’. Eventuali operazioni sul
@@ -461,7 +478,9 @@ int closeFile(const char* pathname) {
     return -1;
   }
   res = receiveResponse();
-  return res;
+  SETERRNO(res);
+  if(res < 0) return -1;
+  return 0;
 }
 
 /*Rimuove il file cancellandolo dal file storage server. L’operazione fallisce
@@ -479,5 +498,7 @@ int removeFile(const char* pathname) {
     return -1;
   }
   res = receiveResponse();
-  return res;
+  SETERRNO(res);
+  if(res < 0) return -1;
+  return 0;
 }

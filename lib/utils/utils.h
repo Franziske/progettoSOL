@@ -154,12 +154,46 @@ int stringToInt(const char* s);
         fprintf(stderr, errString); \
         exit(EXIT_FAILURE);      \
     }
-#define CHECKRES(var,value)\
-     if(var != value){      \
+#define PRINTERR(var,value,errString)\
+     if(var == value){      \
          \
-        printf(stdout, "Richiesta andata a buon fine \n"); \
-        exit(EXIT_FAILURE);      \
+        fprintf(stderr, errString); \
+         \
     }
+#define PRINTERRSC(var,value,errString)\
+     if(var == value){      \
+         \
+        perror(errString); \
+         \
+    }
+
+#define SETERRNO(val)\
+    switch (val){\
+     case -1:{ \
+        errno = ENOENT;\
+         break;\
+     }\
+     case -2:{ \
+        errno = EEXIST;\
+         break;\
+     }\
+     case -3:{\
+        errno = EPERM;\
+         break;\
+     }\
+     case -4:{\
+        errno = ECANCELED;\
+         break;\
+     }\
+     case -5:{\
+        errno = ENOMEM;\
+         break;\
+     }\
+     default:{ \
+         break;\
+     }\
+}
+
 // dal professore
 /*
 #define SYSCALL_EXIT(name, r, sc, str, ...)	\
