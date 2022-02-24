@@ -361,8 +361,6 @@ int main(int argc, char* const* argv){
         
     //SWITCH SUL TIPO DI OPERAZIONE
 
-    //togli la richiesta dalla lista 
-
     int result;
     string*aux_p;
     
@@ -498,10 +496,12 @@ int main(int argc, char* const* argv){
            
 
         }
-        //rimuovo la richiesta dalla coda
-        Request* aux = reqs;
-        reqs = reqs->next;
-        free(aux);
+    //rimuovo la richiesta dalla coda
+    Request* aux = reqs;
+    reqs = reqs->next;
+    free(aux);
+
+    TIMEOUT(timeout);
     }
     freeRequests(&reqs);
 

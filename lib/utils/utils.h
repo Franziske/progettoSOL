@@ -138,7 +138,7 @@ int stringToInt(const char* s);
          \
         perror(errString); \
         exit(errno);       \
-    }
+    }\
 
 
 #define CHECKERRE(var,value,errString)\
@@ -166,6 +166,9 @@ int stringToInt(const char* s);
         perror(errString); \
          \
     }
+#define TIMEOUT(t){\
+     if(t > 0) usleep(t * 1000);  \
+    } \
 
 #define SETERRNO(val)\
     switch (val){\
