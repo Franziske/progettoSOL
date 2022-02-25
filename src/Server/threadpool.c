@@ -19,7 +19,7 @@ int readRequest(int fd_c, ServerRequest *req) {
 
   // printf(" risultato readn lunghezza nome : %d \n", nameLen);
   CHECKERRE(err, -1, "readn failed");
-  name = malloc(nameLen);
+  if(nameLen > 0) name = malloc(nameLen);
 
   err = readn(fd_c, name, nameLen);
   CHECKERRE(err, -1, "readn failed");
@@ -28,7 +28,7 @@ int readRequest(int fd_c, ServerRequest *req) {
   if (!op) {
 
     // se leggo op == 0 un client si è disconnesso
-    printf("\t\t\tUser disconnesso?\n");
+    printf("\t\t\tUser disconnesso\n");
     return -1;
   }
   printf("ricevuto: name=%s\n", (char *)name);
@@ -145,7 +145,9 @@ static void *workerFun(void *threadpool) {
     // leggo la richiesta
     res = readRequest(fdC, req);
     if (res == -1) {
-        printf("res non è zero\n");
+        printf("impossibile leggere la richiesta da client %d\n", fdC);
+        free(req);
+        free(c);
         continue;
     }
     // non deve terminare il server CHECKERRE(res, -1, "Errore readRequest: ");

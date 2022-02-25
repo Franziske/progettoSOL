@@ -186,6 +186,7 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
     // altrimenti errore
     if (f == NULL) {
       //_pthread_mutex_unlock(&(f->mutex));
+      free(name);
       return -1;
     }
   }
@@ -195,6 +196,7 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
     // altrimenti errore
     if (f != NULL) {
       // UNLOCK(&(f->mutex));
+      free(name);
       return -2;
     }
     printf("creo il file \n");
@@ -211,6 +213,7 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
 
     currNFile++;
     if (pthread_mutex_init(&f->mutex, NULL) != 0) {
+      free(name);
       freeFile(f);
       return -4;
     }
@@ -251,6 +254,7 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
         // avevo creato il file ma l'operazione di lock non è andata a buon fine
         // UNLOCK(&(f->mutex));
         freeFile(f);
+        free(name);
       }
       return -4;
     }

@@ -53,7 +53,7 @@ size_t getList(const char* str, string** list){
        f->name = malloc(strlen(subString)*sizeof(char)+1);
        strcpy(f->name,subString);
        f->nextString = NULL;
-
+    
        if(tail == NULL){
            *list = f;
            tail = f;
@@ -65,6 +65,7 @@ size_t getList(const char* str, string** list){
     
        subStrNumber ++;
      }
+    free(subString);
 
     return subStrNumber;
 
