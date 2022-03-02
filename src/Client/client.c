@@ -22,7 +22,8 @@
 
 
 void help(){
-    printf("comando help\n");
+    printf(" -f filename \n -w dirname[,n=0]\n -W file1[,file2]\n -D dirname\n -r file1[,file2]\n -R[n=0]\n -d dirname\n -t time \n -l file1[,file2]\n -u file1[,file2]\n -c file1[,file2]\n -p  \n");
+
 }
 
 typedef struct Request{
@@ -65,7 +66,6 @@ size_t getList(const char* str, string** list){
     
        subStrNumber ++;
      }
-    free(subString);
 
     return subStrNumber;
 

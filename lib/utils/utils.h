@@ -130,6 +130,9 @@ int removeHead(string** list);
 int listFileInDir(char *dirName, int n, string **list);
 int stringToInt(const char* s);
 
+
+void printOp(Operation op, char* f, int retvalue, int bytes);
+
 // con le macro ho libertà nei tipi
 
 // se il parametro var ha valore value ottengo l'errore errString
@@ -138,7 +141,7 @@ int stringToInt(const char* s);
          \
         perror(errString); \
         exit(errno);       \
-    }\
+    }
 
 
 #define CHECKERRE(var,value,errString)\
@@ -166,9 +169,8 @@ int stringToInt(const char* s);
         perror(errString); \
          \
     }
-#define TIMEOUT(t){\
+#define TIMEOUT(t)\
      if(t > 0) usleep(t * 1000);  \
-    } \
 
 #define SETERRNO(val)\
     switch (val){\

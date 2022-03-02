@@ -15,6 +15,21 @@ int stringToInt(const char* s) {
   return n;
 }
 
+void printOp(Operation op, char* f, int retvalue, int bytes){
+  switch(op) {
+  case Read: printf("Operazione Read "); break;
+  case Write: printf("Operazione Write "); break;
+  case Lock: printf("Operazione Lock "); break;
+  case Unlock: printf("Operazione Unlock "); break;
+  case Cancel: printf("Operazione Cancel "); break;
+  case Close: printf("Operazione Close "); break;
+  default: fprintf(stderr,"Invalid Enum Value ");
+  }
+  printf("sul file %s terminata con risultato: %d \n",f,retvalue);
+  if(bytes > 0) printf("sono stati coivolti nell'operazione %d bytes", bytes);
+    
+}
+
 int sendResponse(int fd, int res) {
   int err;
   err = writen(fd, &res, sizeof(int));
@@ -22,6 +37,8 @@ int sendResponse(int fd, int res) {
   CHECKERRE(err, -1, "Errore writen: ");
   return res;
 }
+
+
 
 Client* addClient(Client** list, Client* newReq) {
   printf("aggiungo req alla coda \n");
