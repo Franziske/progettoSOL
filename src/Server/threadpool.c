@@ -202,6 +202,7 @@ static void *workerFun(void *threadpool) {
       }
       case U: {
         res = UnlockInStorage(req->fileName, req->client);
+        sendResponse(fdC, res);
         int r = write(pool->fdsPipe, &fdC, sizeof(int));
         // check write
         break;
@@ -209,6 +210,8 @@ static void *workerFun(void *threadpool) {
 
       case C: {
         res = DeleteFromStorage(req->fileName, req->client);
+        sendResponse(fdC, res);
+        int r = write(pool->fdsPipe, &fdC, sizeof(int));
 
         break;
       }
@@ -224,7 +227,7 @@ static void *workerFun(void *threadpool) {
     }
     // sendResponse(fdC,res);
 
-    printf(" scrivo su pipe %d fdc: %d\n", pool->fdsPipe, fdC);
+  
 
     free(c);
     free(req);

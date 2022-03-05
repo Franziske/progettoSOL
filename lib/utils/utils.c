@@ -15,7 +15,7 @@ int stringToInt(const char* s) {
   return n;
 }
 
-void printOp(Operation op, char* f, int retvalue, int bytes){
+/*void printOp(Operation op, char* f, int retvalue, int bytes){
   switch(op) {
   case Read: printf("Operazione Read "); break;
   case Write: printf("Operazione Write "); break;
@@ -28,6 +28,11 @@ void printOp(Operation op, char* f, int retvalue, int bytes){
   printf("sul file %s terminata con risultato: %d \n",f,retvalue);
   if(bytes > 0) printf("sono stati coivolti nell'operazione %d bytes", bytes);
     
+}*/
+
+void printOp (const char* op, char* f, int retvalue, int bytes){
+  printf("Operazione %s \n effettuata sul file:\n%s \n terminata con risultato: %d \n",op,f,retvalue);
+   if(bytes > 0) printf("sono stati coivolti nell'operazione %d bytes", bytes);
 }
 
 int sendResponse(int fd, int res) {

@@ -180,6 +180,8 @@ File* FindVictims(int n, int fd, int* victimsCount) {
 int OpenInStorage(char* name, int dim, int flags, int fd) {
   File* f = findFile(name);
 
+  if(f == NULL) printf("file non trovato\n");
+
   if (flags < 2) {
     // O_CREATE non è settato
     // controllo che il file sia presente nello storage

@@ -131,7 +131,9 @@ int listFileInDir(char *dirName, int n, string **list);
 int stringToInt(const char* s);
 
 
-void printOp(Operation op, char* f, int retvalue, int bytes);
+//void printOp(Operation op, char* f, int retvalue, int bytes);
+
+void printOp (const char*, char* f, int retvalue, int bytes);
 
 // con le macro ho libertà nei tipi
 
@@ -140,7 +142,7 @@ void printOp(Operation op, char* f, int retvalue, int bytes);
     if(var == value){      \
          \
         perror(errString); \
-        exit(errno);       \
+        exit(errno);  \     
     }
 
 
@@ -163,12 +165,16 @@ void printOp(Operation op, char* f, int retvalue, int bytes);
         fprintf(stderr, errString); \
          \
     }
-#define PRINTERRSC(var,value,errString)\
+
+#define PRINTERRSC(var,value,errString, termination)\
      if(var == value){      \
          \
         perror(errString); \
-         \
-    }
+        termination = 1;\
+        break;\
+     }
+     
+
 #define TIMEOUT(t)\
      if(t > 0) usleep(t * 1000);  \
 
@@ -198,6 +204,30 @@ void printOp(Operation op, char* f, int retvalue, int bytes);
          break;\
      }\
 }
+
+// macro per le lock
+
+#define LOCK(l)      if (pthread_mutex_lock(l)!=0)        { \
+    fprintf(stderr, "ERRORE FATALE lock\n");		    \
+    pthread_exit((void*)EXIT_FAILURE);			    \
+  }   
+#define LOCK_RETURN(l, r)  if (pthread_mutex_lock(l)!=0)        {	\
+    fprintf(stderr, "ERRORE FATALE lock\n");				\
+    return r;								\
+  }   
+
+#define UNLOCK(l)    if (pthread_mutex_unlock(l)!=0)      {	    \
+    fprintf(stderr, "ERRORE FATALE unlock\n");			    \
+    pthread_exit((void*)EXIT_FAILURE);				    \
+  }
+#define UNLOCK_RETURN(l,r)    if (pthread_mutex_unlock(l)!=0)      {	\
+    fprintf(stderr, "ERRORE FATALE unlock\n");				\
+    return r;								\
+  }
+#define WAIT(c,l)    if (pthread_cond_wait(c,l)!=0)       {	    \
+    fprintf(stderr, "ERRORE FATALE wait\n");			    \
+    pthread_exit((void*)EXIT_FAILURE);				    \
+  }
 
 // dal professore
 /*

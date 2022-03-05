@@ -37,8 +37,9 @@ typedef struct Request{
 } Request;
 
 size_t getList(const char* str, string** list){
-    char* aux = malloc(strlen(str)*sizeof(char)+1);
-    strcpy(aux,str);
+    /*char* aux = malloc(strlen(str)*sizeof(char)+1);
+    strcpy(aux,str);*/
+    char*aux = str;
     char* subString;
     string* tail = *list;
 
@@ -118,7 +119,6 @@ int main(int argc, char* const* argv){
 
    FILE *ifp;
    void *buffer;
-   //int justRead = 0;
    int bytesRead = 0;
    int msec = 500;
    struct timespec spec;
@@ -126,7 +126,7 @@ int main(int argc, char* const* argv){
     //flags per vedre se ho ricevuto -p,-f,-h
     bool print = 0;      //devo stampare le info relative ad una richiesta?
     bool socketInzialized = 0;       //ho già inzializzato la socket?
-    bool helpRequested = 0;      //ho già ricevuto il comando help?
+    bool termination = 0;      //devo terminare prematuramente il client?
     size_t timeout = 0;        //intervallo fra richieste //err, timeout = 0, msec = 10;
   
   //controllo che ci siano opzioni altrimenti termino fallendo
@@ -145,24 +145,27 @@ int main(int argc, char* const* argv){
     // utilizzo getopt per fare il parsing come mostrato in man 3 getopt
     while ((opt = getopt(argc, argv, ":hpf:t:w:W:r:R::l:u:c:d:D:p")) != -1) {
         switch (opt) {
-            case 'h':
+            case 'h':{
                 help();
                 freeRequests(&reqs);
                 //freeRequests(operations);
                 return EXIT_SUCCESS;
-            case 'p':
+            }
+            case 'p':{
                 // optional
                 CHECKERRE(print, 1, "Richiesta mal formata:-p duplicato");
                 print = 1;
                 printf("stampe abilitate\n");
                 break;
-            case 'f':
+            }
+            case 'f':{
                 // required
                 CHECKERRE(socketInzialized, 1, "Richiesta mal formata:-f duplicato");
                 serverSocket = optarg;
                 printf("server socket inizializzata: %s\n", serverSocket);
                 socketInzialized = 1;
                 break;
+            }
             case 't':{
                 int t;
                 t = atoi(optarg);
@@ -172,9 +175,9 @@ int main(int argc, char* const* argv){
                 }
                 timeout = (size_t) t;
                 printf("timeout setted to: %ld millisec\n", timeout);
-            }
                 break;
-            case 'w': {
+            }
+            case 'w':{
                 
                 Request* req = malloc(sizeof(Request));
                 
@@ -197,7 +200,7 @@ int main(int argc, char* const* argv){
                addRequest(&reqs, req);
                break;  
             }
-            case 'W': {
+            case 'W':{
                 
                 Request* req = malloc(sizeof(Request));
                 req->op = Write;
@@ -212,7 +215,7 @@ int main(int argc, char* const* argv){
                 addRequest(&reqs, req);
                 break;
             }
-            case 'R': {
+            case 'R':{
                 
                 Request* req = malloc(sizeof(Request));
 
@@ -248,7 +251,7 @@ int main(int argc, char* const* argv){
                 addRequest(&reqs, req);
                 break;
             }
-            case 'r': {
+            case 'r':{
                 
                 Request* req = malloc(sizeof(Request));
                 req->op = Read;
@@ -262,7 +265,7 @@ int main(int argc, char* const* argv){
                 addRequest(&reqs, req);
                 break;
             }
-            case 'l': {
+            case 'l':{
                 
                 Request* req = malloc(sizeof(Request));
                 req->op = Lock;
@@ -276,7 +279,7 @@ int main(int argc, char* const* argv){
                 addRequest(&reqs, req);
                 break;
             }
-            case 'u': {
+            case 'u':{
                 
                 Request* req = malloc(sizeof(Request));
                 req->op = Unlock;
@@ -290,7 +293,7 @@ int main(int argc, char* const* argv){
                 addRequest(&reqs, req);
                 break;
             }
-            case 'c': {
+            case 'c':{
                 
                 Request* req = malloc(sizeof(Request));
                 req->op = Cancel;
@@ -304,33 +307,32 @@ int main(int argc, char* const* argv){
                 addRequest(&reqs, req);
                 break;
             }
-            case 'd':
+            case 'd':{
                 //controllo che -d sia preceduto da una richiesta di lettura
                 aux = checkLastOp(reqs,Read);
                 CHECKERRE(aux ,NULL,
                          "Richiesta mal formata: -d non preceduta da una lettura");
                 aux->dirTo = optarg;
-
                 break;
-            case 'D':
+            }
+            case 'D':{
                 //controllo che -D sia preceduto da una richiesta di scrittura
                  aux = checkLastOp(reqs,Write);
                 CHECKERRE(aux ,NULL,
                          "Richiesta mal formata: -D non preceduta da una scrittura");
-                aux->dirTo = optarg;
-                
+                aux->dirTo = optarg; 
                 break;
-            
-            case ':':
-                fprintf(stderr, "L'opzione richiede un argomento\n");
-                //printf("Argument %s needs a value\n", argv[optind - 1]);
+            }
+            case ':':{
+                fprintf(stderr, "L'opzione richiede un argomento\n"); 
                 break;
-            case '?':
+            }
+            case '?':{
                 fprintf(stderr, "l'opzione non è riconosciuta\n");
-                //printf("Unknown option: %c\n", optopt);
                 break;
+            }
             
-                //printf("Default: %c %s\n", opt, optarg);
+            
         }
     }
    //controllo che mi sia stat specificata una socket
@@ -365,7 +367,7 @@ int main(int argc, char* const* argv){
     int result;
     string*aux_p;
     
-    while (reqs != NULL) {
+    while (reqs != NULL && !termination) {
 
         switch (reqs->op) {
 
@@ -376,6 +378,7 @@ int main(int argc, char* const* argv){
                 while(prova != NULL){
                     printf("%s\n", prova->name);
                     prova = prova->nextString;
+
 
                 }
                 //posso avere n invece che il nome del file
@@ -389,14 +392,17 @@ int main(int argc, char* const* argv){
                     int flags = 3;
                     result = 0;
                     result = openFile(aux_p->name, flags);
-                    CHECKERRSC(result, -1, "Errore openFile: ");
+                    PRINTERRSC(result, -1, "Errore openFile: ",termination);
                     //usleep(timeout *1000);
                     result = 0;
                     result = writeFile(aux_p->name, reqs->dirTo);
-                    CHECKERRSC(result, -1, "Errore writeFile: ");
+                    if(print){
+                            printOp("Write", aux_p->name,result, 0);
+                        }
+                    PRINTERRSC(result, -1, "Errore writeFile: ",termination);
                     result = 0;
                     result = closeFile(aux_p->name);
-                    CHECKERRSC(result, -1, "Errore closeFile: ");
+                    PRINTERRSC(result, -1, "Errore closeFile: ",termination);
                     aux_p = aux_p->nextString;
                 }
 
@@ -429,17 +435,20 @@ int main(int argc, char* const* argv){
                     for (size_t i = 0; i < reqs->filesNumber; i++){  
                         result = 0;
                         aux_p = reqs->files;
-                        int flags = 3;
+                        int flags = 0;
                         void* buffer = NULL;
                         size_t dim;
                         result = openFile(aux_p->name, flags);
-                        CHECKERRSC(result, -1, "Errore openFile: ");
+                        PRINTERRSC(result, -1, "Errore openFile: ",termination);
                             result = 0;
                         result = readFile(aux_p->name, buffer, &dim);
-                        CHECKERRSC(result, -1, "Errore readFile: ");
+                        if(print){
+                            printOp("Read", aux_p->name,result,dim);
+                        }
+                        PRINTERRSC(result, -1, "Errore readFile: ",termination);
                             result = 0;
                         result = closeFile(aux_p->name);
-                        CHECKERRSC(result, -1, "Errore closeFile: ");
+                        PRINTERRSC(result, -1, "Errore closeFile: ",termination);
                         aux_p= aux_p->nextString;
                     }
                 }
@@ -447,7 +456,7 @@ int main(int argc, char* const* argv){
                     if(reqs->n > 0){
                         printf("richiesta lettura n files\n");
                         result = readNFiles(reqs->n, reqs->dirTo);
-                         CHECKERRSC(result, -1, "Errore readNFile: ");
+                         PRINTERRSC(result, -1, "Errore readNFile: ",termination);
                     }
                 }
 
@@ -458,7 +467,10 @@ int main(int argc, char* const* argv){
                 CHECKERRE(reqs->files,NULL,"Richiesta lockFile malformata");
                 CHECKERRE(reqs->files->name,NULL,"Richiesta lockFile malformata");
                 result = lockFile(reqs->files->name);
-                CHECKERRSC(result, -1, "Errore lockFile: ");
+                if(print){
+                    printOp("Lock", reqs->files->name,result,0);
+                }
+                PRINTERRSC(result, -1, "Errore lockFile: ",termination);
             break;
             }
             case Unlock:{
@@ -466,7 +478,10 @@ int main(int argc, char* const* argv){
                 CHECKERRE(reqs->files,NULL,"Richiesta unlockFile malformata");
                 CHECKERRE(reqs->files->name,NULL,"Richiesta unlockFile malformata");
                 result = unlockFile(reqs->files->name);
-                CHECKERRSC(result, -1, "Errore unlockFile: ");
+                if(print){
+                    printOp("Unlock", reqs->files->name,result,0);
+                }
+                PRINTERRSC(result, -1, "Errore unlockFile: ",termination);
             break;
             }
             case Cancel:{
@@ -479,10 +494,13 @@ int main(int argc, char* const* argv){
                 int flags = 3;
                 result = 0;
                 result = lockFile(aux_p->name);
-                CHECKERRSC(result, -1, "Errore lockFile: ");
+                PRINTERRSC(result, -1, "Errore lockFile: ",termination);
                 result = 0;
                 result = removeFile(reqs->files->name);
-                CHECKERRSC(result, -1, "Errore removeFile: ");
+                if(print){
+                    printOp("Cancel", aux_p->name,result,0);
+                }
+                PRINTERRSC(result, -1, "Errore removeFile: ",termination);
                 
                 aux_p= aux_p->nextString;
             }
@@ -500,134 +518,20 @@ int main(int argc, char* const* argv){
     //rimuovo la richiesta dalla coda
     Request* aux = reqs;
     reqs = reqs->next;
+    if(aux->dirFrom != NULL)free(aux->dirFrom);
+    if(aux->dirTo != NULL)free(aux->dirTo);
+    if(aux->files != NULL)freeStringList(&(aux->files));
     free(aux);
 
     TIMEOUT(timeout);
     }
-    freeRequests(&reqs);
-
-    
 
     }
 
     printf("Terminando Client....");
+    if (termination == 1) printf("client terminato in seguito a errore \n");
+    freeRequests(&reqs);
     int res = closeConnection(serverSocket);
-    CHECKERRSC(res, -1, "Errore closeConnection: ")
-   
-
-   /*clock_gettime(CLOCK_REALTIME, &spec);
-    spec.tv_sec  = spec.tv_sec + 10;
-
-    printf("due time: %ld nanoseconds \n",spec.tv_nsec);
-   printf("due time: %ld seconds\n\n",spec.tv_sec);
-
-   openConnection(SOCKNAME,msec,spec);
-
-   //printf("Risultato openConnection fd skt = %d \n", fd_skt);
-
-   /// terza versione
-   // lettura da file
-   char* fileName = malloc(45);
-   strcpy(fileName,"/home/franc/Documents/ClientServer/prova.txt");
-
-   bytesRead = getFile(&buffer, fileName);
-   printf("----> bytes read %d \n", bytesRead);
-   string* fileList = NULL; // = malloc(sizeof(string));
-   int n = 0;
-   char* dirName = malloc(27);
-   strcpy(dirName,"/home/franc/Documents/dire");
-   int filesRead = listFileInDir(dirName,n , &fileList);
-
-   printf("file letti : %d  = \n", filesRead);
-
-   string*aux = fileList;
-   while (aux!= NULL){
-   printf("nella lista di file ho :%s \n", aux->name);
-   aux = aux->nextString;
-   }
-   printf("stampa finita\n");
-
-   int flags = -1;
-   int resSend = sendRequest(Lock, bytesRead, fileName, flags);
-
-   printf("risultato send : %d\n", resSend);
-
-   //printf("invio %s\n", (char*)buffer);
-  // writen(fd_skt, buffer, bytesRead);
-   sendFile(buffer,bytesRead);
-   free(buffer);
-
-  void *buffer1 = malloc(26);
-
-
-  readn(3, buffer1, 26);
-
-   FILE *file = fopen("back.txt", "w");
-   CHECKERRSC(file, NULL, "fopen failed");
-
-   fwrite(buffer1, 1, 26, file);
-
-   fclose(file);
-
-   free(buffer1);
-   free(fileName);
-  
-   freeStringList(&fileList);
-
-
-
-   // testo get list
-
-   string* list = NULL;
-   char* param = malloc(28);
-
-   strcpy(param,"/ciao/1,/ciao/due,/ciao/tre");
-
-   getList(param,&list);
-
-   string* tmp = list;
-   while(tmp!=NULL){
-      printf("file letto : %s \n", tmp->name );
-      tmp= tmp->nextString;
-   }
-
-   free(param);
-
-   freeStringList(&list);*/
-
-  // close(fd_skt);
-
-   /*long            ns; // Milliseconds
-   long          s;  // Seconds
-   struct timespec spec;
-
-   long            currns; // Milliseconds
-   long          currs;  // Seconds
-   struct timespec currSpec;
-
-   //prendi il tempo subito dopo il primo tentativo
-    clock_gettime(CLOCK_REALTIME, &spec);
-   printf("due time: %ld seconds\n\n",spec.tv_sec);
-    spec.tv_sec  = spec.tv_sec + 5;
-    ns = spec.tv_nsec; // Convert nanoseconds to milliseconds
-
-    printf("due time: %ld nanoseconds \n",ns);
-   printf("due time: %ld seconds\n\n",spec.tv_sec);
-   int msec = 500;
-
-   //OpenConnection
-
-    clock_gettime(CLOCK_REALTIME, &currSpec);
-
-    while(currSpec.tv_sec < s){
-         printf("Current time: %ld nanoseconds \n",currSpec.tv_nsec);
-         printf("Current time: %ld seconds \n\n",currSpec.tv_sec);
-         usleep((useconds_t)msec * (useconds_t)1000);
-         clock_gettime(CLOCK_REALTIME, &currSpec);
-         }
-
-   printf("uscita dal while Current time: %ld nanoseconds \n",currSpec.tv_nsec);
-   printf("uscita dal while il tempo Current time: %ld seconds\n",currSpec.tv_sec);
-       */  
+    CHECKERRSC(res, -1, "Errore closeConnection: ");
 
 }
