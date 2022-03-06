@@ -45,7 +45,7 @@ int sendResponse(int fd, int res) {
 
 
 
-Client* addClient(Client** list, Client* newReq) {
+Client* addClient(Client** list, Client* newReq){
   printf("aggiungo req alla coda \n");
   if ((*list) == NULL) {
     *list = newReq;

@@ -6,25 +6,25 @@ int readRequest(int fd_c, ServerRequest *req) {
   void *name = NULL;
   int err;
   err = readn(fd_c, &op, sizeof(int));
-  CHECKERRE(err, -1, "readn failed");
+  CHECKERRE(err, -1, "readn op failed");
 
   // printf("readn = %d \n",readn(fd_c,&dim, sizeof(int)));
   err = readn(fd_c, &dim, sizeof(int));
-  CHECKERRE(err, -1, "readn failed");
+  CHECKERRE(err, -1, "readn dim failed");
 
   err = readn(fd_c, &flags, sizeof(int));
-  CHECKERRE(err, -1, "readn failed");
+  CHECKERRE(err, -1, "readn flags failed");
 
   err = readn(fd_c, &nameLen, sizeof(int));
 
   // printf(" risultato readn lunghezza nome : %d \n", nameLen);
-  CHECKERRE(err, -1, "readn failed");
+  CHECKERRE(err, -1, "readn name  failed");
   if(nameLen > 0) name = malloc(nameLen);
 
   err = readn(fd_c, name, nameLen);
   CHECKERRE(err, -1, "readn failed");
 
-  printf("ricevuto -> op=%d\tdim=%d nameLen=%d\n", op, dim, nameLen);
+  printf("ricevuto -> op=%d\tdim=%d\tnameLen=%d\n", op, dim, nameLen);
   if (!op) {
 
     // se leggo op == 0 un client si è disconnesso
@@ -159,6 +159,8 @@ static void *workerFun(void *threadpool) {
         // controlla errori send
         sendResponse(fdC, res);
         int r = write(pool->fdsPipe, &fdC, sizeof(int));
+        // se non creo il file al termine dell'op dealloco il nome
+        if(req->flags < 2) free(req->fileName);
 
         // check write
         break;
@@ -181,7 +183,9 @@ static void *workerFun(void *threadpool) {
         break;
       }
       case R: {
+        printf("richiesta di leggere dallo storage con %d FLAGS \n", req->flags);
         res = ReadFromStorage(req->fileName, req->flags, req->client);
+        printf("risultato di read da storage %d\n", res);
         int r = write(pool->fdsPipe, &fdC, sizeof(int));
         free(req->fileName);
         break;

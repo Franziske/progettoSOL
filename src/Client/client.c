@@ -18,7 +18,7 @@
 #include "../../lib/api/api.h"
 
 #define UNIX_PATH_MAX 108 /* man 7 unix */
-#define N 10
+#define FILECAPACITY 20
 
 
 void help(){
@@ -128,6 +128,12 @@ int main(int argc, char* const* argv){
     bool socketInzialized = 0;       //ho già inzializzato la socket?
     bool termination = 0;      //devo terminare prematuramente il client?
     size_t timeout = 0;        //intervallo fra richieste //err, timeout = 0, msec = 10;
+
+    void* filesRead[FILECAPACITY];
+    int filesReadNumber = 0;
+    
+    for(int i=0;i<FILECAPACITY;i++)
+    filesRead[i]=NULL;
   
   //controllo che ci siano opzioni altrimenti termino fallendo
      if (argc == 1) {
@@ -441,7 +447,16 @@ int main(int argc, char* const* argv){
                         result = openFile(aux_p->name, flags);
                         PRINTERRSC(result, -1, "Errore openFile: ",termination);
                             result = 0;
-                        result = readFile(aux_p->name, buffer, &dim);
+                        result = readFile(aux_p->name, &buffer, &dim);
+                        if(filesReadNumber == FILECAPACITY){
+                            printf("impossibile memorizzare altri file senza salvarlisul disco\n");
+                        }
+                        if(result == 0 && filesReadNumber < FILECAPACITY){
+                            
+                            filesRead[filesReadNumber] = buffer;
+                            filesReadNumber ++;
+                        }
+                       
                         if(print){
                             printOp("Read", aux_p->name,result,dim);
                         }
@@ -531,6 +546,9 @@ int main(int argc, char* const* argv){
     printf("Terminando Client....");
     if (termination == 1) printf("client terminato in seguito a errore \n");
     freeRequests(&reqs);
+    for(int i = 0; i < filesReadNumber; i++){
+        free(filesRead[i]);
+    }
     int res = closeConnection(serverSocket);
     CHECKERRSC(res, -1, "Errore closeConnection: ");
 

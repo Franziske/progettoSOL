@@ -52,16 +52,20 @@ File* findFile(char* nameF) {
 int addFile(File* newFile) {
   int res;
   if (storageHead == NULL) {
+    printf("FILE AGGIUNTO IN TESTA\n");
     storageHead = newFile;
     // LOCK(&storageHead->mutex);
     storageTail = storageHead;
     // res = //UNLOCK(&storageHead->mutex);
   } else {
+    printf("FILE AGGIUNTO IN CODA\n");
     // LOCK(&storageTail->mutex);
     storageTail->nextFile = newFile;
     storageTail = storageTail->nextFile;
     // res = //UNLOCK(&storageTail->mutex);
   }
+
+  printf("\n ATTUALMENTE:\n testa %s\n coda %s \n", storageHead->name, storageTail->name);
   return 0;
 }
 
@@ -109,18 +113,26 @@ File* findFileAndPrec(char* nameF, File** prec) {
 
 int sendFile(File* f, int fd) {
   int res;
-  int nameLen;
+  //int nameLen;
 
-  nameLen = strlen(f->name) + 1;
+  //nameLen = strlen(f->name) + 1;
 
-  res = writen(fd, &nameLen, sizeof(int));
-  if (res == -1) return 4;
+  //res = writen(fd, &nameLen, sizeof(int));
+  //if (res == -1) return 4;
   res = writen(fd, &(f->dim), sizeof(int));
-  if (res == -1) return -4;
-  res = writen(fd, f->name, nameLen);
-  if (res == -1) return -4;
+  if (res == -1){
+    printf("errore invio dim file %d\n\n",f->dim);
+    return -4;
+    
+  }
+  //res = writen(fd, f->name, nameLen);
+  //if (res == -1) return -4;
   res = writen(fd, f->buff, f->dim);
-  if (res == -1) return -4;
+  if (res == -1){
+    printf("errore invio buff\n\n");
+    return -4;
+  
+  }
 
   return 0;
 }
@@ -214,11 +226,21 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
     f->buff = NULL;
 
     currNFile++;
+
+    printf("numero corrente di file nello storage: %d\n", currNFile);
     if (pthread_mutex_init(&f->mutex, NULL) != 0) {
       free(name);
       freeFile(f);
       return -4;
     }
+
+     if (addFile(f) != 0) {
+    printf("file non aggiunto \n");
+    freeFile(f);
+    return -4;
+  }
+
+  printf("file aggiunto \n");
     // LOCK(&(f->mutex));
 
     /* ||
@@ -272,13 +294,7 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
   printf("aggiungo fd a chi ha aperto il file \n");
   // UNLOCK(&(f->mutex));
 
-  if (addFile(f) != 0) {
-    printf("file non aggiunto \n");
-    freeFile(f);
-    return -4;
-  }
-
-  printf("file aggiunto \n");
+ 
   return 0;
 }
 
@@ -442,8 +458,16 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
 
   // aggiungo file
 }
+
 int ReadFromStorage(char* name, int flags, int fd) {
   // controllo che il file esista
+
+  printf("numero corrente di file nello storage %d\n",currNFile);
+  File* aux1 = storageHead;
+  while(aux1!= NULL){
+    printf("File %s", aux1->name);
+    aux1 = aux1->nextFile;
+  }
 
   if (flags == 0) {
     File* f = findFile(name);
@@ -453,7 +477,9 @@ int ReadFromStorage(char* name, int flags, int fd) {
     }
 
     // il file è esplicitamente lockato da fd
-    if (f->lock == fd) {
+    if (f->lock == fd){
+      //informo il cliente che riceverà un file
+      //sendResponse(fd, 1);
       int res = sendFile(f, fd);
       // UNLOCK(&(f->mutex));
       return res;
@@ -461,6 +487,8 @@ int ReadFromStorage(char* name, int flags, int fd) {
 
     //_pthread_mutex_lock(&(f->mutex));
     if (f->lock == -1) {
+      //informo il cliente che riceverà un file
+      //sendResponse(fd, 1);
       int res = sendFile(f, fd);
 
       // UNLOCK(&(f->mutex));
@@ -476,19 +504,25 @@ int ReadFromStorage(char* name, int flags, int fd) {
 
   //_pthread_mutex_lock(&(storageMutex));
 
+  //se non ci sono file da leggere nello storage
   if (currNFile == 0) {
     int r = 0;
     sendResponse(fd, r);
-    return 0;
+    return -1;
   }
+
   if (flags > currNFile)
     actualN = currNFile;
   else {
     actualN = flags;
   }
 
+
+   File* aux = storageHead;
+   printf("storage head name %s\n", aux->name);
+
   sendResponse(fd, actualN);
-  File* aux = storageHead;
+ 
 
   printf("storage head name %s\n", aux->name);
 
@@ -642,6 +676,8 @@ int DeleteFromStorage(char* name, int fd) {
 int freeStorage() {
   printf("sto deallocando storage\n");
   while (storageHead != NULL) {
+    printf("file %s\n", storageHead->name);
+    printf("eliminando un file\n");
     File* aux = storageHead;
     storageHead = storageHead->nextFile;
     freeFile(aux);

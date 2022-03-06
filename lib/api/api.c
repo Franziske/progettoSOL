@@ -47,9 +47,9 @@ int receiveResponse() {
   int res = 0;
   int err;
   err = readn(fdSkt, &res, sizeof(int));
-  printf("ricevuto : %d\n", res);
+  
   CHECKERRE(err, -1, "Errore readn: ");
-
+  printf("ricevuto : %d\n", res);
   return res;
 }
 /*int sendRequest(Operation op, int dim, const char *name, int flags, int fd){
@@ -312,7 +312,9 @@ int readFile(const char* pathname, void** buf, size_t* size) {
     return -1;
   }
   if (res > 0) {
-    *buf = malloc(res);
+    printf("RES RICEVUTO = %d", res);
+  
+    *buf = malloc((size_t)res);
     res = readn(fdSkt, *buf, (size_t)res);
   }
   if (res < 0) {

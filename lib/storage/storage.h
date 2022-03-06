@@ -27,7 +27,7 @@ int storageInit(int c,int m);
 int OpenInStorage(char* name, int dim, int flags, int fd);
 int CloseInStorage(char* name, int fd) ;
 int WriteInStorage(char* name, int dim, int flags, int fd) ;
-int ReadFromStorage();
+int ReadFromStorage(char* name, int flags, int fd);
 int LockInStorage();
 int DeleteFromStorage();
 int UnlockInStorage();
