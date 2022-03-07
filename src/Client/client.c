@@ -234,16 +234,17 @@ int main(int argc, char* const* argv){
                 // se presente faccio il parsing di n
               
                 char* args = optarg;
-                char*parsedN = strtok_r(args, ",", &args);
-                if (parsedN != NULL && parsedN[0] == '='){
-                req->n = atoi(parsedN + 1);
-                }
+                 if(args!= NULL){
+                    char*parsedN = strtok_r(args, ",", &args);
+                    if (parsedN != NULL && parsedN[0] == '='){
+                    req->n = atoi(parsedN + 1);
+                    }
+                    else{
+                        fprintf(stderr, "richiestra read malformata ");
+                        exit(EXIT_FAILURE);
+                    }
 
-                
-                else{
-                    fprintf(stderr, "richiestra read malformata ");
-                    exit(EXIT_FAILURE);
-                }
+                 }
 
                 /*strtok_r(optarg, ",", &optarg);
                 if (optarg != NULL)
@@ -432,10 +433,10 @@ int main(int argc, char* const* argv){
 
                 //CHECKERRE(reqs->files,NULL,"Richiesta readFile malformata");
                 //CHECKERRE(reqs->files->name,NULL,"Richiesta readFile malformata");
-                if(reqs->files == NULL){
+                /*if(reqs->files == NULL){
                      fprintf(stderr, "richiestra read malformata ");
                     exit(EXIT_FAILURE);
-                }
+                }*/
               
                 if(reqs->files != NULL){
                     for (size_t i = 0; i < reqs->filesNumber; i++){  
@@ -468,11 +469,15 @@ int main(int argc, char* const* argv){
                     }
                 }
                 else{
-                    if(reqs->n > 0){
+                    //if(reqs->n > 0){
                         printf("richiesta lettura n files\n");
+                        if(reqs->dirTo == NULL){
+                            fprintf(stderr, "Errore lettura di n file: non è stata specificata la directory di salvataggio\n");
+                            break;
+                        }
                         result = readNFiles(reqs->n, reqs->dirTo);
                          PRINTERRSC(result, -1, "Errore readNFile: ",termination);
-                    }
+                    //}
                 }
 
             break;
@@ -534,7 +539,7 @@ int main(int argc, char* const* argv){
     Request* aux = reqs;
     reqs = reqs->next;
     if(aux->dirFrom != NULL)free(aux->dirFrom);
-    if(aux->dirTo != NULL)free(aux->dirTo);
+    //if(aux->dirTo != NULL)free(aux->dirTo);
     if(aux->files != NULL)freeStringList(&(aux->files));
     free(aux);
 

@@ -97,11 +97,21 @@ int receiveAndSaveFile(const char* dirname) {
     return -1;
   }
   name = malloc(nameLen);
+
+  printf("Pre lettura nome \n");
   res = readn(fdSkt, name, nameLen);
+
+  printf("post lettura nome\n");
   if (res == -1) {
+
+    printf("CASO ERRORE\n");
     errno = ECOMM;
     return -1;
   }
+
+  printf("PRE STAMPA\n");
+
+  printf("nome file ricevuto ora: %s\n", name);
 
   buffer = malloc(dim);
   res = readn(fdSkt, buffer, dim);
@@ -115,11 +125,13 @@ int receiveAndSaveFile(const char* dirname) {
 
     char* path = malloc(pathLen);
     strcpy(path, dirname);
-    strcat(path, "/");
+    //strcat(path, "/");
     strcat(path, name);
     path[pathLen - 1] = '\0';
 
-    FILE* file = fopen(path, "w");
+    printf("PATH : %s\n", path);
+
+    FILE* file = fopen(path, "w+");
     CHECKERRSC(file, NULL, "fopen failed");
 
     fwrite(buffer, 1, dim, file);
@@ -301,7 +313,7 @@ int readFile(const char* pathname, void** buf, size_t* size) {
     return -1;
   }
 
-  int res = sendRequest(R, 0, pathname, 0);
+  int res = sendRequest(R, 0, pathname, -1);
   if (res == -1) {
     errno = ECOMM;
     return -1;
@@ -346,8 +358,7 @@ int readNFiles(int N, const char* dirname) {
   res = receiveResponse();  
   SETERRNO(res);
     if(res < 0) return -1;
-  // res in questo caso è il numero di file che invia
-                            // il server
+  // res in questo caso è il numero di file che invia il server
   for (int i = 0; i < res; i++) {
     if (receiveAndSaveFile(dirname) == -1) {
       errno = ECOMM;

@@ -133,9 +133,40 @@ int sendFile(File* f, int fd) {
     return -4;
   
   }
-
   return 0;
 }
+
+int sendFileWithName(File* f, int fd) {
+  int res;
+  int nameLen;
+  char* pName;
+
+  
+  pName = strrchr(f->name, '/');
+  printf("NOME DA INVIARE %s", pName);
+  nameLen = strlen(pName)+1;
+
+
+  res = writen(fd, &nameLen, sizeof(int));
+  if (res == -1) return 4;
+  res = writen(fd, &(f->dim), sizeof(int));
+  if (res == -1){
+    printf("errore invio dim file %d\n\n",f->dim);
+    return -4;
+    
+  }
+  res = writen(fd, pName, nameLen);
+  printf("nome file inviato: %s \n", f->name);
+  if (res == -1) return -4;
+  res = writen(fd, f->buff, f->dim);
+  if (res == -1){
+    printf("errore invio buff\n\n");
+    return -4;
+  
+  }
+  return 0;
+}
+
 
 // restitusco la lista di file vittima per far spazio nello storage a n byte
 
@@ -465,11 +496,11 @@ int ReadFromStorage(char* name, int flags, int fd) {
   printf("numero corrente di file nello storage %d\n",currNFile);
   File* aux1 = storageHead;
   while(aux1!= NULL){
-    printf("File %s", aux1->name);
+    printf("File %s\n", aux1->name);
     aux1 = aux1->nextFile;
   }
 
-  if (flags == 0) {
+  if (flags == -1) {
     File* f = findFile(name);
     if (f == NULL) {
       //_pthread_mutex_unlock(&(f->mutex));
@@ -511,11 +542,14 @@ int ReadFromStorage(char* name, int flags, int fd) {
     return -1;
   }
 
-  if (flags > currNFile)
+  if (flags == 0 || flags > currNFile)
     actualN = currNFile;
+
   else {
     actualN = flags;
   }
+
+  printf("\t sto per inviare %d file", actualN);
 
 
    File* aux = storageHead;
@@ -529,7 +563,8 @@ int ReadFromStorage(char* name, int flags, int fd) {
   for (int i = 0; i < actualN; i++) {
     //_pthread_mutex_lock(&(aux->mutex));
     if (aux->lock == fd) {
-      int res = sendFile(aux, fd);
+      int res = sendFileWithName(aux, fd);
+      aux = aux->nextFile;
       //_pthread_mutex_unlock(&(aux->mutex));
       // return res;
       continue;
@@ -537,7 +572,8 @@ int ReadFromStorage(char* name, int flags, int fd) {
 
     //_pthread_mutex_lock(&(f->mutex));
     if (aux->lock == -1) {
-      int res = sendFile(aux, fd);
+      int res = sendFileWithName(aux, fd);
+      aux = aux->nextFile;
       continue;
 
       // UNLOCK(&(aux->mutex));
