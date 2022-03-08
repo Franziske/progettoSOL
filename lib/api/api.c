@@ -324,7 +324,8 @@ int readFile(const char* pathname, void** buf, size_t* size) {
     return -1;
   }
   if (res > 0) {
-    printf("RES RICEVUTO = %d", res);
+    printf("RES RICEVUTO = %d\n", res);
+    *size = (size_t)res;
   
     *buf = malloc((size_t)res);
     res = readn(fdSkt, *buf, (size_t)res);
@@ -333,7 +334,7 @@ int readFile(const char* pathname, void** buf, size_t* size) {
     errno = ECOMM;
     return -1;
   }
-  *size = (size_t)&res;
+  
   return 0;
 }
 

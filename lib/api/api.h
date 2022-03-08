@@ -9,6 +9,8 @@
 int sendRequest(serverOperation op, int dim, const char *name, int flags);
 int sendFile(void* buffer, size_t n);
 int getFile(void **buffer, const char *fileName);
+int receiveAndSaveFile(const char* dirname);
+
  /*Viene aperta una connessione AF_UNIX al socket file sockname. Se il server non accetta immediatamente la
 richiesta di connessione, la connessione da parte del client viene ripetuta dopo ‘msec’ millisecondi e fino allo
 scadere del tempo assoluto ‘abstime’ specificato come terzo argomento. Ritorna 0 in caso di successo, -1 in caso

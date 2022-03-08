@@ -437,11 +437,12 @@ int main(int argc, char* const* argv){
                      fprintf(stderr, "richiestra read malformata ");
                     exit(EXIT_FAILURE);
                 }*/
+                aux_p = reqs->files;
               
                 if(reqs->files != NULL){
                     for (size_t i = 0; i < reqs->filesNumber; i++){  
                         result = 0;
-                        aux_p = reqs->files;
+                        
                         int flags = 0;
                         void* buffer = NULL;
                         size_t dim;
@@ -449,10 +450,11 @@ int main(int argc, char* const* argv){
                         PRINTERRSC(result, -1, "Errore openFile: ",termination);
                             result = 0;
                         result = readFile(aux_p->name, &buffer, &dim);
+                        printf("\n DIMENSIONE FILE %ld\n", dim);
                         if(filesReadNumber == FILECAPACITY){
                             printf("impossibile memorizzare altri file senza salvarlisul disco\n");
                         }
-                        if(result == 0 && filesReadNumber < FILECAPACITY){
+                        if(result == 0 && filesReadNumber < FILECAPACITY && reqs->dirTo == NULL){
                             
                             filesRead[filesReadNumber] = buffer;
                             filesReadNumber ++;
@@ -462,10 +464,34 @@ int main(int argc, char* const* argv){
                             printOp("Read", aux_p->name,result,dim);
                         }
                         PRINTERRSC(result, -1, "Errore readFile: ",termination);
-                            result = 0;
+
+                        if(reqs->dirTo != NULL){
+                            char* pName;
+                            pName = strrchr(aux_p->name, '/');
+                            int pathLen = (strlen(reqs->dirTo) + strlen(pName)) * sizeof(char) + 1;
+
+                            char* path = malloc(pathLen);
+                            strcpy(path, reqs->dirTo);
+                            strcat(path, pName);
+                            path[pathLen - 1] = '\0';
+
+                            printf("PATH : %s\n", path);
+
+                            FILE* file = fopen(path, "w+");
+                            CHECKERRSC(file, NULL, "fopen failed");
+
+                            fwrite(buffer, 1, dim, file);
+
+                            fclose(file);
+
+                            free(buffer);
+                            free(path);
+                        }
+
+                        result = 0;
                         result = closeFile(aux_p->name);
                         PRINTERRSC(result, -1, "Errore closeFile: ",termination);
-                        aux_p= aux_p->nextString;
+                        aux_p = aux_p->nextString;
                     }
                 }
                 else{
@@ -509,14 +535,15 @@ int main(int argc, char* const* argv){
                 CHECKERRE(reqs->files->name,NULL,"Richiesta removeFile malformata");
                 
                 result = 0;
-            for (size_t i = 0; i < reqs->filesNumber; i++){  
                 aux_p = reqs->files;
+            for (size_t i = 0; i < reqs->filesNumber; i++){  
+                
                 int flags = 3;
                 result = 0;
-                result = lockFile(aux_p->name);
+                //result = lockFile(aux_p->name);
                 PRINTERRSC(result, -1, "Errore lockFile: ",termination);
                 result = 0;
-                result = removeFile(reqs->files->name);
+                result = removeFile(aux_p->name);
                 if(print){
                     printOp("Cancel", aux_p->name,result,0);
                 }
