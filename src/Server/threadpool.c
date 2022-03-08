@@ -216,7 +216,7 @@ static void *workerFun(void *threadpool) {
         res = DeleteFromStorage(req->fileName, req->client);
         sendResponse(fdC, res);
         int r = write(pool->fdsPipe, &fdC, sizeof(int));
-
+        free(req->fileName);
         break;
       }
       case CC: {

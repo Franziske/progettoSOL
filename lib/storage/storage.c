@@ -476,10 +476,11 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
     }
   }
 
- 
-
   f->dim = dim;
   f->buff = buff;
+  currMem = currMem + dim;
+
+  printf("ATTUALMENTE: %d MEMORIA\n%d FILE\n\n",currMem,currNFile);
    printf("DIMENSIONE FILE %d \n", f->dim);
   return 0;
 
@@ -684,11 +685,11 @@ int DeleteFromStorage(char* name, int fd) {
 
   //_pthread_mutex_lock(&(f->mutex));
 
-  if (f->lock != fd) {
+  /*if (f->lock != fd ) {
     //_pthread_mutex_unlock(&(storageMutex));
     // UNLOCK(&(f->mutex));
     return -3;
-  }
+  }*/
   if (prec == NULL) {
     storageHead = f->nextFile;
     //_pthread_mutex_unlock(&(storageMutex));
@@ -704,6 +705,8 @@ int DeleteFromStorage(char* name, int fd) {
   currMem = currMem - f->dim;
   currNFile = currNFile - 1;
   // UNLOCK(&(storageMutex));
+
+  printf("ATTUALMENTE: %d MEMORIA\n%d FILE\n\n",currMem,currNFile);
 
   freeFile(f);
   return 0;
