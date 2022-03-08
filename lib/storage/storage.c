@@ -143,7 +143,7 @@ int sendFileWithName(File* f, int fd) {
 
   
   pName = strrchr(f->name, '/');
-  printf("NOME DA INVIARE %s", pName);
+  printf("NOME DA INVIARE %s\n", pName);
   nameLen = strlen(pName)+1;
 
 
@@ -156,7 +156,6 @@ int sendFileWithName(File* f, int fd) {
     
   }
   res = writen(fd, pName, nameLen);
-  printf("nome file inviato: %s \n", f->name);
   if (res == -1) return -4;
   res = writen(fd, f->buff, f->dim);
   if (res == -1){
@@ -196,12 +195,15 @@ File* FindVictims(int n, int fd, int* victimsCount) {
       vTail = victims;
       storageHead = storageHead->nextFile;
       vTail->nextFile = NULL;
+      
     } else {
       vTail->nextFile = storageHead;
       storageHead = storageHead->nextFile;
       vTail = vTail->nextFile;
       vTail->nextFile = NULL;
     }
+
+    printf("\nNEW VICTIM %s\n", vTail->name);
     // addCient(&storageHead->open),);    //deleted from storage
 
     // la lock effettuata sulla testa all'inizio del ciclo
@@ -209,9 +211,10 @@ File* FindVictims(int n, int fd, int* victimsCount) {
     //_pthread_mutex_unlock(&(vTail->lockFile));
 
     (*victimsCount)++;
+    if(currNFile == max) break;
 
-    currMem = currMem - (vTail->dim);
-    currNFile--;
+    //currMem = currMem - (vTail->dim);
+    //currNFile--;
   }
 
   return victims;
@@ -447,14 +450,13 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
 
   if (flags == 1) {
     // invio i file vittima e li cancello dallo storage
-
+    File* aux;
     while (victims != NULL) {
-      File* aux = victims;
-
       // gestisci errore send
-
-      if ((err = sendFile(aux, fd)) < 1) return err;
-
+      aux = victims;
+      printf("\n file vittima da inviare : %s \n", victims->name);
+      err = sendFileWithName(victims, fd);
+      if (err < 0) return err;
       victims = victims->nextFile;
       currMem = currMem - aux->dim;
       currNFile = currNFile - 1;
@@ -464,6 +466,7 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
     // invio i file vittima al al client
 
   } else {
+    //altrimenti cancello i file vittima senza inviarli
     while (victims != NULL) {
       File* aux = victims;
       victims = victims->nextFile;
@@ -603,6 +606,8 @@ int LockInStorage(char* name, int fd) {
   }
   if (f->lock == -1) {
     f->lock = fd;
+
+    printf("file %s lockato da client %d\n", f->name,fd);
     // UNLOCK(&(f->mutex));
     return 0;
   }

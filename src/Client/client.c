@@ -565,7 +565,7 @@ int main(int argc, char* const* argv){
     //rimuovo la richiesta dalla coda
     Request* aux = reqs;
     reqs = reqs->next;
-    if(aux->dirFrom != NULL)free(aux->dirFrom);
+    //if(aux->dirFrom != NULL)free(aux->dirFrom);
     //if(aux->dirTo != NULL)free(aux->dirTo);
     if(aux->files != NULL)freeStringList(&(aux->files));
     free(aux);

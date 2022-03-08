@@ -388,7 +388,9 @@ int writeFile(const char* pathname, const char* dirname) {
   void* buffer = NULL;
 
   int bytesRead = getFile(&buffer, pathname);
-  int res = sendRequest(W, bytesRead, pathname, 0);
+  int res;
+  if (dirname != NULL) res = sendRequest(W, bytesRead, pathname, 1);
+  else res = sendRequest(W, bytesRead, pathname, 0);
   if (res == -1) {
     errno = ECOMM;
     return -1;
@@ -406,6 +408,8 @@ int writeFile(const char* pathname, const char* dirname) {
   if(res < 0) return -1;
   // res in questo caso è il numero di file che invia
                             // il server
+
+  printf("numero FILE VITTIMA ricevuto %d\n",res);
 
   if (dirname != NULL) {
     for (int i = 0; i < res; i++) {
