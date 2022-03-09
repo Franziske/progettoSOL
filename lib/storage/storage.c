@@ -65,7 +65,7 @@ int storageInit(int c, int m) {
 }
 
 // POSSO RESTITUIRE IL FILE LOCKATO?????????
-// restituisce il file lockato
+// restituisce il file con la lock per poterlo leggere
 
 File* findFile(char* nameF) {
   if (storageHead == NULL) return NULL;
@@ -73,11 +73,15 @@ File* findFile(char* nameF) {
   File* aux = storageHead;
 
   while (aux != NULL) {
+
+    lockToRead(aux);
+
     if (strncmp(aux->name, nameF, (ssize_t)strlen(nameF) + 1) == 0) {
      
       return aux;
     
     }
+    unlockToRead(aux);
     aux = aux->nextFile;
   }
 
