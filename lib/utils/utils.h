@@ -211,7 +211,7 @@ void printOp (const char*, char* f, int retvalue, int bytes);
     fprintf(stderr, "ERRORE FATALE lock\n");		    \
     pthread_exit((void*)EXIT_FAILURE);			    \
   }   
-#define LOCK_RETURN(l, r)  if (pthread_mutex_lock(l)!=0)        {	\
+#define LOCKR(l, r)  if (pthread_mutex_lock(l)!=0)        {	\
     fprintf(stderr, "ERRORE FATALE lock\n");				\
     return r;								\
   }   
@@ -220,7 +220,7 @@ void printOp (const char*, char* f, int retvalue, int bytes);
     fprintf(stderr, "ERRORE FATALE unlock\n");			    \
     pthread_exit((void*)EXIT_FAILURE);				    \
   }
-#define UNLOCK_RETURN(l,r)    if (pthread_mutex_unlock(l)!=0)      {	\
+#define UNLOCKR(l,r)    if (pthread_mutex_unlock(l)!=0)      {	\
     fprintf(stderr, "ERRORE FATALE unlock\n");				\
     return r;								\
   }

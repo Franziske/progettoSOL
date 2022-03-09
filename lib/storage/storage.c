@@ -10,10 +10,48 @@ int max;
 int currMem;
 int currNFile;
 
-pthread_mutex_t storageMutex;
 
 File* storageHead;
 File* storageTail;
+
+
+int lockToModify(File* f){
+  LOCKR(&(f->modifyMutex), -1);
+  return 0;
+}
+int unlockToModify(File* f){
+  UNLOCKR(&(f->modifyMutex), -1);
+  return 0;
+}
+
+int lockToRead(File* f){
+  LOCKR(&(f->cntMutex), -1);
+  f->readCnt ++;
+  if(f->readCnt == 1){
+
+    if(pthread_mutex_lock(&(f->modifyMutex)) != 0){
+      UNLOCKR(&(f->cntMutex), -1);
+      return -1;
+    }
+  }
+  UNLOCKR(&(f->cntMutex), -1);
+  return 0;
+
+}
+int unlockToRead(File* f){
+   LOCKR(&(f->cntMutex), -1);
+  f->readCnt --;
+  if(f->readCnt == 0){
+
+    if(pthread_mutex_unlock(&(f->modifyMutex)) != 0){
+      UNLOCKR(&(f->cntMutex), -1);
+      return -1;
+    }
+  }
+  UNLOCKR(&(f->cntMutex), -1);
+  return 0;
+
+}
 
 // inizializzo le variabili globali
 int storageInit(int c, int m) {
@@ -237,6 +275,7 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
     f->name = name;
     f->dim = dim;
     f->lock = -1;
+    f->readCnt = 0;
     f->lockReqs = NULL;
     f->open = NULL;
     f->nextFile = NULL;
@@ -246,7 +285,12 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
 
     printf("numero corrente di file nello storage: %d\n", currNFile);
 
-    if (pthread_mutex_init(&f->mutex, NULL) != 0) {
+    if (pthread_mutex_init(&f->cntMutex, NULL) != 0) {
+      free(name);
+      freeFile(f);
+      return -4;
+    }
+     if (pthread_mutex_init(&f->modifyMutex, NULL) != 0) {
       free(name);
       freeFile(f);
       return -4;
