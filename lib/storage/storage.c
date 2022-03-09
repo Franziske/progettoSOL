@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-// extern int capacity;
-// extern int max;
 
 int capacity;
 int max;
@@ -25,7 +23,7 @@ int storageInit(int c, int m) {
   currNFile = 0;
   storageHead = NULL;
   storageTail = NULL;
-  return pthread_mutex_init(&storageMutex, NULL);
+  return 0;
 }
 
 // POSSO RESTITUIRE IL FILE LOCKATO?????????
@@ -38,10 +36,9 @@ File* findFile(char* nameF) {
 
   while (aux != NULL) {
     if (strncmp(aux->name, nameF, (ssize_t)strlen(nameF) + 1) == 0) {
-      // if (//LOCK(&(aux->mutex)) == 0)
+     
       return aux;
-      // else
-      return NULL;
+    
     }
     aux = aux->nextFile;
   }
@@ -54,15 +51,15 @@ int addFile(File* newFile) {
   if (storageHead == NULL) {
     printf("FILE AGGIUNTO IN TESTA\n");
     storageHead = newFile;
-    // LOCK(&storageHead->mutex);
+
     storageTail = storageHead;
-    // res = //UNLOCK(&storageHead->mutex);
+
   } else {
     printf("FILE AGGIUNTO IN CODA\n");
-    // LOCK(&storageTail->mutex);
+  ;
     storageTail->nextFile = newFile;
     storageTail = storageTail->nextFile;
-    // res = //UNLOCK(&storageTail->mutex);
+
   }
 
   printf("\n ATTUALMENTE:\n testa %s\n coda %s \n", storageHead->name, storageTail->name);
@@ -72,13 +69,12 @@ int addFile(File* newFile) {
 void freeFile(File* f) {
   free(f->name);
   free(f->buff);
-  //_pthread_mutex_destroy(&(f->lockFile));
-  // pthread_cond_destroy(&(f->condFile));
+
   free(f);
 }
 
 // restituisce il puntatore al file e setta prec in modo che punti al suo
-// predecessore, prec == NULL se il file è in testa alla lista restituisce NULL
+// predecessore, prec == NULL se il file è in testa alla lista, restituisce NULL
 // se il file non è presente nello storage
 
 File* findFileAndPrec(char* nameF, File** prec) {
@@ -88,10 +84,9 @@ File* findFileAndPrec(char* nameF, File** prec) {
 
   if (strncmp(storageHead->name, nameF, strlen(nameF) + 1) == 0) {
     *prec = NULL;
-    // if (//LOCK(&storageHead->mutex) == 0)
+  
     return storageHead;
-    // else
-    //  return NULL;
+
   }
 
   *prec = storageHead;
@@ -99,10 +94,10 @@ File* findFileAndPrec(char* nameF, File** prec) {
 
   while (aux != NULL) {
     if (strncmp(aux->name, nameF, strlen(nameF) + 1) == 0) {
-      // if (//LOCK(&(aux->mutex)) == 0)
+   
       return aux;
-      // else
-      return NULL;
+    
+    
     }
     (*prec) = aux;
     aux = aux->nextFile;
@@ -111,22 +106,17 @@ File* findFileAndPrec(char* nameF, File** prec) {
   return NULL;
 }
 
+//invia la dimensione del file f e il buffer con il suo contenuto
 int sendFile(File* f, int fd) {
   int res;
-  //int nameLen;
 
-  //nameLen = strlen(f->name) + 1;
-
-  //res = writen(fd, &nameLen, sizeof(int));
-  //if (res == -1) return 4;
   res = writen(fd, &(f->dim), sizeof(int));
   if (res == -1){
     printf("errore invio dim file %d\n\n",f->dim);
     return -4;
     
   }
-  //res = writen(fd, f->name, nameLen);
-  //if (res == -1) return -4;
+
   res = writen(fd, f->buff, f->dim);
   if (res == -1){
     printf("errore invio buff\n\n");
@@ -136,6 +126,7 @@ int sendFile(File* f, int fd) {
   return 0;
 }
 
+//invia la lunghezza del nome del file f, la dimensione del file f, il suo nome e il buffer con il suo contenuto
 int sendFileWithName(File* f, int fd) {
   int res;
   int nameLen;
@@ -183,12 +174,10 @@ File* FindVictims(int n, int fd, int* victimsCount) {
       return NULL;
     }
 
-    //_lock(&storageHead->lockFile);
+
     storageHead->lock = fd;
 
     count = count + storageHead->dim;
-
-    // addFile(victims, f);
 
     if (victims == NULL) {
       victims = storageHead;
@@ -204,17 +193,11 @@ File* FindVictims(int n, int fd, int* victimsCount) {
     }
 
     printf("\nNEW VICTIM %s\n", vTail->name);
-    // addCient(&storageHead->open),);    //deleted from storage
 
-    // la lock effettuata sulla testa all'inizio del ciclo
-    // corrisponde all'unlock sull'ultimo elemento di victims
-    //_pthread_mutex_unlock(&(vTail->lockFile));
 
     (*victimsCount)++;
     if(currNFile == max) break;
 
-    //currMem = currMem - (vTail->dim);
-    //currNFile--;
   }
 
   return victims;
@@ -233,7 +216,7 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
     // controllo che il file sia presente nello storage
     // altrimenti errore
     if (f == NULL) {
-      //_pthread_mutex_unlock(&(f->mutex));
+    
       free(name);
       return -1;
     }
@@ -243,7 +226,7 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
     // controlle che il file non esista già
     // altrimenti errore
     if (f != NULL) {
-      // UNLOCK(&(f->mutex));
+     
       free(name);
       return -2;
     }
@@ -262,6 +245,7 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
     currNFile++;
 
     printf("numero corrente di file nello storage: %d\n", currNFile);
+
     if (pthread_mutex_init(&f->mutex, NULL) != 0) {
       free(name);
       freeFile(f);
@@ -275,42 +259,23 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
   }
 
   printf("file aggiunto \n");
-    // LOCK(&(f->mutex));
-
-    /* ||
-    (pthread_cond_init(&(f->condFile), NULL) != 0)){
-
-        freeFile(f);
-    }*/
+  
   }
 
   if (flags % 2 == 1) {
     // O_LOCK settato
     // setto flag lock
-    //_pthread_mutex_lock(&(f->mutex));
+
     if (f->lock == -1 || f->lock == fd) {
       printf("setto il flag lock sul file \n");
 
       f->lock = fd;
-      // UNLOCK(&(f->mutex));
-
-      // if(pthread_mutex_trylock(&(f->lockFile)) == 0){
-
-      // inutilr è già la semantica della lock
-      /*printf("un client cerca di eseguire la lock su %s \n", f->name);
-
-      while (f->lock != -1) {
-
-          printf(" aspetta che sia rilasciata la lock \n");
-          pthread_cond_wait(&(f->condFile), &(f->lockFile));
-      }*/
-      // f->lock = fd;
 
     } else {
       //è stata richiesta la lock ma il file è già lockato restituisco errore
       if (flags == 3) {
         // avevo creato il file ma l'operazione di lock non è andata a buon fine
-        // UNLOCK(&(f->mutex));
+   
         freeFile(f);
         free(name);
       }
@@ -323,12 +288,10 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
   newC->fdC = fd;
   newC->nextC = NULL;
 
-  // LOCK(&(f->mutex));
+
   addClient(&(f->open), newC);
   printf("aggiungo fd a chi ha aperto il file \n");
-  // UNLOCK(&(f->mutex));
 
- 
   return 0;
 }
 
@@ -337,12 +300,12 @@ int CloseInStorage(char* name, int fd) {
 
   File* f = findFile(name);
   if (f == NULL) {
-    //_pthread_mutex_unlock(&(f->mutex));
+
     printf("il file non esiste \n");
     return -1;
   }
   // controllo che sia stata effettuata prima una open dal client c
-  // LOCK(&(f->mutex));
+
 
   printf("chiudo il file \n");
   int res = removeClient(&(f->open), fd);
@@ -350,7 +313,7 @@ int CloseInStorage(char* name, int fd) {
   if (f->lock == fd) {
     if (f->lockReqs == NULL) {
       f->lock = -1;
-      // UNLOCK(&(f->mutex));
+  
       return 0;
     } else {
       f->lock = f->lockReqs->fdC;
@@ -359,15 +322,12 @@ int CloseInStorage(char* name, int fd) {
       free(aux);
       sendResponse(f->lock, 0);
     }
-    // UNLOCK(&(f->mutex));
+  
   }
-
-  // UNLOCK(&(f->mutex));
-
   return res;
 
   // se il file esiste aperto da fd lo chiudo
-  // f->open = -1;
+
 }
 
 // restituisce il numero di file espulsi
@@ -398,15 +358,15 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
     printf("file non trovato\n");
     return -1;
   }
-  //_pthread_mutex_lock(&(f->mutex));
+
   if (f->lock != fd) {
-    // UNLOCK(&(f->mutex));
+
     printf("file trovato ma senza lock da fd\n");
 
     return -3;
   }
   printf("Tutto bene lock=%d e fd=%d\n", f->lock, fd);
-  res =  // UNLOCK(&(f->mutex));
+
       printf("Res della unlock %d\n", res);
   // il file è esplicitamente loccato da fd tramite il flag
 
@@ -419,26 +379,24 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
   }
   if (aux == NULL) {
     printf("file trovato ma non aperto da fd\n");
-    //_pthread_mutex_unlock(&(f->mutex));
+   
     return -3;
   }
-  //_pthread_mutex_unlock(&(f->mutex));
+ 
 
   // controllo se sforo la capacità dello storage in tal caso seleziono le
   // vittime
 
   int victimsCount = 0;
-  printf("pre lock storageMutex\n");
-  // LOCK(&(storageMutex));
-  printf("post lock storageMutex\n");
 
-  // se sforerei la cxapacità massima o il numero masiimo di file nello storage
+
+  // se sforassi la capacità massima o il numero masiimo di file nello storage
   //seleziono i file vittima da rimuovere
 
   if (currMem + dim > capacity || currNFile == max) {
     victims = FindVictims(currMem + dim - capacity, fd, &victimsCount);
   }
-  // UNLOCK(&(storageMutex));
+
 
   // invio al client il numero di file vittima
   int err;
@@ -471,10 +429,10 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
       File* aux = victims;
       victims = victims->nextFile;
 
-      // LOCK(&(storageMutex));
+   
       currMem = currMem - aux->dim;
       currNFile = currNFile - 1;
-      // UNLOCK(&(storageMutex));
+     
       freeFile(aux);
     }
   }
@@ -494,6 +452,10 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
   // aggiungo file
 }
 
+//legge files dallo storage:
+//se flags = -1 significa che non ho specificato n (numero di file dal leggere)
+//altrimenti flags corrisponde a n, se flags = 0 è richiesta la lettura di tutti i file 
+
 int ReadFromStorage(char* name, int flags, int fd) {
   // controllo che il file esista
 
@@ -507,26 +469,24 @@ int ReadFromStorage(char* name, int flags, int fd) {
   if (flags == -1) {
     File* f = findFile(name);
     if (f == NULL) {
-      //_pthread_mutex_unlock(&(f->mutex));
+ 
       return -1;
     }
 
     // il file è esplicitamente lockato da fd
     if (f->lock == fd){
-      //informo il cliente che riceverà un file
-      //sendResponse(fd, 1);
+     
       int res = sendFile(f, fd);
-      // UNLOCK(&(f->mutex));
+  
       return res;
     }
 
-    //_pthread_mutex_lock(&(f->mutex));
+ 
     if (f->lock == -1) {
       //informo il cliente che riceverà un file
       //sendResponse(fd, 1);
       int res = sendFile(f, fd);
 
-      // UNLOCK(&(f->mutex));
       return res;
     }
 
@@ -537,7 +497,7 @@ int ReadFromStorage(char* name, int flags, int fd) {
   // leggere
   int actualN;  // numero di file realmente inviati al client
 
-  //_pthread_mutex_lock(&(storageMutex));
+
 
   //se non ci sono file da leggere nello storage
   if (currNFile == 0) {
@@ -565,22 +525,21 @@ int ReadFromStorage(char* name, int flags, int fd) {
   printf("storage head name %s\n", aux->name);
 
   for (int i = 0; i < actualN; i++) {
-    //_pthread_mutex_lock(&(aux->mutex));
+   
     if (aux->lock == fd) {
       int res = sendFileWithName(aux, fd);
       aux = aux->nextFile;
-      //_pthread_mutex_unlock(&(aux->mutex));
+    
       // return res;
       continue;
     }
 
-    //_pthread_mutex_lock(&(f->mutex));
     if (aux->lock == -1) {
       int res = sendFileWithName(aux, fd);
       aux = aux->nextFile;
       continue;
 
-      // UNLOCK(&(aux->mutex));
+      
       // return res;
     }
       // TODO scorrere aux 
@@ -589,26 +548,28 @@ int ReadFromStorage(char* name, int flags, int fd) {
   }
   return 0;
 }
+
+//setta il flag di lock da parte del client fd del file identificato da name 
 int LockInStorage(char* name, int fd) {
   // controllo il flag di lock o lo setto o mi metto in coda
 
   File* f = findFile(name);
   if (f == NULL) {
-    // UNLOCK(&(f->mutex));
+   
     return -1;
   }
   // provo ad acquisire la lock
-  //_pthread_mutex_lock(&(f->mutex));
+
 
   if (f->lock == fd) {
-    // UNLOCK(&(f->mutex));
+
     return 0;
   }
   if (f->lock == -1) {
     f->lock = fd;
 
     printf("file %s lockato da client %d\n", f->name,fd);
-    // UNLOCK(&(f->mutex));
+    
     return 0;
   }
 
@@ -617,31 +578,11 @@ int LockInStorage(char* name, int fd) {
   newC->nextC = NULL;
 
   addClient(&(f->lockReqs), newC);
-  // UNLOCK(&(f->mutex));
+
 
   return 1;
 
-  // int res = pthread_mutex_trylock(&(f->lockFile));
 
-  /*if(res == 0){
-
-      printf("un client cerca di eseguire la lock su %s \n", f->name);
-
-      while (f->lock != -1) {
-
-          printf(" aspetta che sia rilasciata la lock \n");
-          pthread_cond_wait(&(f->condFile), &(f->lockFile));
-      }
-      f->lock = fd;
-      return 0;
-  }*/
-
-  // la lock non è andata a buon fine perchè già acquisita da un altro client
-  // if(res == EBUSY){
-
-  //}
-
-  // else return -4;
 }
 
 int UnlockInStorage(char* name, int fd) {
@@ -649,13 +590,13 @@ int UnlockInStorage(char* name, int fd) {
 
   File* f = findFile(name);
   if (f == NULL) {
-    // UNLOCK(&(f->mutex));
+  
     return -1;
   }
   // controllo che sia stata effettuata prima una lock dal client c
-  //_pthread_mutex_lock(&(f->mutex));
+
   if (f->lock != fd) {
-    // UNLOCK(&(f->mutex));
+  
     return -3;
   }
   // se il file esiste lockato da fd
@@ -663,7 +604,7 @@ int UnlockInStorage(char* name, int fd) {
 
   if (f->lockReqs == NULL) {
     f->lock = -1;
-    // UNLOCK(&(f->mutex));
+
     return 0;
   }
 
@@ -671,7 +612,7 @@ int UnlockInStorage(char* name, int fd) {
   Client* aux = f->lockReqs;
   f->lockReqs = f->lockReqs->nextC;
   free(aux);
-  // UNLOCK(&(f->mutex));
+
 
   sendResponse(f->lock, 0);
 
@@ -681,37 +622,42 @@ int UnlockInStorage(char* name, int fd) {
 int DeleteFromStorage(char* name, int fd) {
   File* prec = NULL;
 
-  //_pthread_mutex_lock(&(storageMutex));
+ 
   File* f = findFileAndPrec(name, &prec);
   if (f == NULL) {
-    // UNLOCK(&(f->mutex));
+   
     return -1;
   }
 
-  //_pthread_mutex_lock(&(f->mutex));
 
-  /*if (f->lock != fd ) {
-    //_pthread_mutex_unlock(&(storageMutex));
-    // UNLOCK(&(f->mutex));
+
+  if (f->lock != fd ) {
+
     return -3;
-  }*/
+  }
   if (prec == NULL) {
     storageHead = f->nextFile;
-    //_pthread_mutex_unlock(&(storageMutex));
-    // UNLOCK(&(f->mutex));
-
+  
   } else {
     prec->nextFile = f->nextFile;
-    // UNLOCK(&(f->mutex));
-    //_pthread_mutex_lock(&(storageMutex));
+  
     //  controllo anche la lock sul precedente?
   }
-  // LOCK(&(storageMutex));
+ 
   currMem = currMem - f->dim;
   currNFile = currNFile - 1;
-  // UNLOCK(&(storageMutex));
+
 
   printf("ATTUALMENTE: %d MEMORIA\n%d FILE\n\n",currMem,currNFile);
+
+  //se ho richieste pendenti di lock sul file che sto eleminando
+  //riferisco ai client che il file non esiste più
+
+  Client* aux = f->lockReqs;
+  while (aux != NULL){
+    sendResponse(aux->fdC, -1);
+  }
+  
 
   freeFile(f);
   return 0;
