@@ -4,8 +4,8 @@
 #include <string.h>
 
 
-int capacity;
-int max;
+int capacity;   //capacità massima dello storage
+int max;      //numero massimo di file memorizzabili nello storage
 
 int currMem;
 int currNFile;
@@ -13,6 +13,8 @@ int currNFile;
 
 File* storageHead;
 File* storageTail;
+
+pthread_mutex_t storageMutex;     // mutua esclusione sui parametri dello storage
 
 
 int lockToModify(File* f){
@@ -61,35 +63,48 @@ int storageInit(int c, int m) {
   currNFile = 0;
   storageHead = NULL;
   storageTail = NULL;
-  return 0;
+  return pthread_mutex_init(&(storageMutex),NULL);
 }
 
 // POSSO RESTITUIRE IL FILE LOCKATO?????????
 // restituisce il file con la lock per poterlo leggere
 
 File* findFile(char* nameF) {
-  if (storageHead == NULL) return NULL;
 
-  File* aux = storageHead;
+  //LOCKR(&(storageMutex),NULL);
+
+  if (storageHead == NULL){
+    //UNLOCKR(&(storageMutex),NULL);
+     return NULL;
+  }
+
+   if (strncmp(storageHead->name, nameF, strlen(nameF) + 1) == 0) {
+    return storageHead;
+
+  }
+
+  File* aux = storageHead->nextFile;
 
   while (aux != NULL) {
 
-    lockToRead(aux);
+    //lockToRead(aux);
 
     if (strncmp(aux->name, nameF, (ssize_t)strlen(nameF) + 1) == 0) {
      
+     if(aux != storageTail)UNLOCKR(&(storageMutex), -1);
       return aux;
     
     }
-    unlockToRead(aux);
+    //unlockToRead(aux);
     aux = aux->nextFile;
   }
-
+  //UNLOCKR(&(storageMutex),NULL);
   return NULL;
 }
 
 int addFile(File* newFile) {
   int res;
+
   if (storageHead == NULL) {
     printf("FILE AGGIUNTO IN TESTA\n");
     storageHead = newFile;
@@ -98,13 +113,12 @@ int addFile(File* newFile) {
 
   } else {
     printf("FILE AGGIUNTO IN CODA\n");
-  ;
+  
     storageTail->nextFile = newFile;
     storageTail = storageTail->nextFile;
 
   }
 
-  printf("\n ATTUALMENTE:\n testa %s\n coda %s \n", storageHead->name, storageTail->name);
   return 0;
 }
 
@@ -120,9 +134,13 @@ void freeFile(File* f) {
 // se il file non è presente nello storage
 
 File* findFileAndPrec(char* nameF, File** prec) {
-  if (storageHead == NULL) return NULL;
 
-  File* aux = storageHead;
+   //LOCKR(&(storageMutex), -1);
+
+  if (storageHead == NULL) {
+    //UNLOCKR(&(storageMutex),NULL);
+     return NULL;
+  }
 
   if (strncmp(storageHead->name, nameF, strlen(nameF) + 1) == 0) {
     *prec = NULL;
@@ -131,12 +149,27 @@ File* findFileAndPrec(char* nameF, File** prec) {
 
   }
 
-  *prec = storageHead;
-  aux = storageHead->nextFile;
+  if(storageHead->nextFile == NULL){
+    //UNLOCKR(&(storageMutex), -1);
+    return NULL;
+  }
+
+  if (strncmp(storageHead->nextFile->name, nameF, strlen(nameF) + 1) == 0) {
+    *prec = storageHead;
+  
+    return storageHead->nextFile;
+
+  }
+
+  *prec = storageHead->nextFile;
+  File* aux = (*prec)->nextFile;  
+
 
   while (aux != NULL) {
+
+
     if (strncmp(aux->name, nameF, strlen(nameF) + 1) == 0) {
-   
+      //if(aux != storageTail)UNLOCKR(&(storageMutex), -1);
       return aux;
     
     
@@ -144,7 +177,7 @@ File* findFileAndPrec(char* nameF, File** prec) {
     (*prec) = aux;
     aux = aux->nextFile;
   }
-
+  //if((*prec) == storageTail) UNLOCKR(&(storageMutex), -1);
   return NULL;
 }
 
@@ -238,7 +271,10 @@ File* FindVictims(int n, int fd, int* victimsCount) {
 
 
     (*victimsCount)++;
-    if(currNFile == max) break;
+    currMem = currMem - vTail->dim;
+    currNFile = currNFile - 1;
+    
+    //if(currNFile == max) break;
 
   }
 
@@ -249,7 +285,10 @@ File* FindVictims(int n, int fd, int* victimsCount) {
 // storage
 
 int OpenInStorage(char* name, int dim, int flags, int fd) {
+  LOCKR(&(storageMutex), -3);
   File* f = findFile(name);
+  if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
+  
 
   if(f == NULL) printf("file non trovato\n");
 
@@ -258,7 +297,7 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
     // controllo che il file sia presente nello storage
     // altrimenti errore
     if (f == NULL) {
-    
+      if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
       free(name);
       return -1;
     }
@@ -268,8 +307,10 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
     // controlle che il file non esista già
     // altrimenti errore
     if (f != NULL) {
-     
+
+     if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
       free(name);
+      
       return -2;
     }
     printf("creo il file \n");
@@ -285,8 +326,6 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
     f->nextFile = NULL;
     f->buff = NULL;
 
-    currNFile++;
-
     printf("numero corrente di file nello storage: %d\n", currNFile);
 
     if (pthread_mutex_init(&f->cntMutex, NULL) != 0) {
@@ -300,12 +339,14 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
       return -4;
     }
 
-     if (addFile(f) != 0) {
-    printf("file non aggiunto \n");
-    freeFile(f);
-    return -4;
+    if(f == storageHead || f == storageTail)LOCKR(&(storageMutex), -3); 
+    if (addFile(f) != 0) {
+      UNLOCKR(&(storageMutex), -3); 
+      printf("file non aggiunto \n");
+      freeFile(f);
+      return -4;
   }
-
+  UNLOCKR(&(storageMutex), -3);
   printf("file aggiunto \n");
   
   }
@@ -313,6 +354,8 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
   if (flags % 2 == 1) {
     // O_LOCK settato
     // setto flag lock
+
+    if(f == storageHead || f == storageTail) LOCKR(&(storageMutex),-3);
 
     if (f->lock == -1 || f->lock == fd) {
       printf("setto il flag lock sul file \n");
@@ -327,6 +370,7 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
         freeFile(f);
         free(name);
       }
+      if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
       return -4;
     }
   }
@@ -340,13 +384,17 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
   addClient(&(f->open), newC);
   printf("aggiungo fd a chi ha aperto il file \n");
 
+  if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
   return 0;
 }
 
 int CloseInStorage(char* name, int fd) {
   // controllo che il file esista
 
+  LOCKR(&(storageMutex), -3);
   File* f = findFile(name);
+  if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
+  
   if (f == NULL) {
 
     printf("il file non esiste \n");
@@ -361,7 +409,7 @@ int CloseInStorage(char* name, int fd) {
   if (f->lock == fd) {
     if (f->lockReqs == NULL) {
       f->lock = -1;
-  
+      if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
       return 0;
     } else {
       f->lock = f->lockReqs->fdC;
@@ -372,6 +420,7 @@ int CloseInStorage(char* name, int fd) {
     }
   
   }
+  if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
   return res;
 
   // se il file esiste aperto da fd lo chiudo
@@ -401,14 +450,18 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
   // controllo che sia stata effetuata open con create e lock flags
 
   File* victims = NULL;
+
+  LOCKR(&(storageMutex), -3);
   File* f = findFile(name);
+  if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
+  
   if (f == NULL) {
     printf("file non trovato\n");
     return -1;
   }
 
   if (f->lock != fd) {
-
+    if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
     printf("file trovato ma senza lock da fd\n");
 
     return -3;
@@ -427,23 +480,27 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
   }
   if (aux == NULL) {
     printf("file trovato ma non aperto da fd\n");
-   
+   if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
     return -3;
   }
  
 
-  // controllo se sforo la capacità dello storage in tal caso seleziono le
-  // vittime
+  // controllo se sforo la capacità dello storage in tal caso seleziono i
+  // file vittima da rimuovere
 
   int victimsCount = 0;
 
 
-  // se sforassi la capacità massima o il numero masiimo di file nello storage
-  //seleziono i file vittima da rimuovere
+  if(f != storageHead && f != storageTail)LOCKR(&(storageMutex), -3);  //altrimenti ho già la lock
 
   if (currMem + dim > capacity || currNFile == max) {
     victims = FindVictims(currMem + dim - capacity, fd, &victimsCount);
   }
+
+  currNFile ++;
+  currMem = currMem + dim;
+
+  UNLOCKR(&(storageMutex), -1);
 
 
   // invio al client il numero di file vittima
@@ -455,7 +512,7 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
   // CHECKERRE(err, -1, "Errore writen: ");
 
   if (flags == 1) {
-    // invio i file vittima e li cancello dallo storage
+    // invio i file vittima 
     File* aux;
     while (victims != NULL) {
       // gestisci errore send
@@ -463,23 +520,17 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
       printf("\n file vittima da inviare : %s \n", victims->name);
       err = sendFileWithName(victims, fd);
       if (err < 0) return err;
+
       victims = victims->nextFile;
-      currMem = currMem - aux->dim;
-      currNFile = currNFile - 1;
+     
       freeFile(aux);
     }
-
-    // invio i file vittima al al client
 
   } else {
     //altrimenti cancello i file vittima senza inviarli
     while (victims != NULL) {
       File* aux = victims;
       victims = victims->nextFile;
-
-   
-      currMem = currMem - aux->dim;
-      currNFile = currNFile - 1;
      
       freeFile(aux);
     }
@@ -487,7 +538,6 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
 
   f->dim = dim;
   f->buff = buff;
-  currMem = currMem + dim;
 
   printf("ATTUALMENTE: %d MEMORIA\n%d FILE\n\n",currMem,currNFile);
    printf("DIMENSIONE FILE %d \n", f->dim);
@@ -508,14 +558,13 @@ int ReadFromStorage(char* name, int flags, int fd) {
   // controllo che il file esista
 
   printf("numero corrente di file nello storage %d\n",currNFile);
-  File* aux1 = storageHead;
-  while(aux1!= NULL){
-    printf("File %s\n", aux1->name);
-    aux1 = aux1->nextFile;
-  }
 
   if (flags == -1) {
+
+    LOCKR(&(storageMutex), -3);
     File* f = findFile(name);
+    if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
+  
     if (f == NULL) {
  
       return -1;
@@ -523,22 +572,22 @@ int ReadFromStorage(char* name, int flags, int fd) {
 
     // il file è esplicitamente lockato da fd
     if (f->lock == fd){
-     
+      
       int res = sendFile(f, fd);
-  
+      if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
       return res;
     }
 
  
     if (f->lock == -1) {
-      //informo il cliente che riceverà un file
-      //sendResponse(fd, 1);
+   
       int res = sendFile(f, fd);
-
+      if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
       return res;
     }
 
     // invalid operation file locked
+    if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
     return -3;
   }
   // altrimenti il valore di flags è il numero che viene richiesto di file da
@@ -548,11 +597,16 @@ int ReadFromStorage(char* name, int flags, int fd) {
 
 
   //se non ci sono file da leggere nello storage
+
+  LOCKR(&(storageMutex), -3);
   if (currNFile == 0) {
+  UNLOCKR(&(storageMutex), -3);
     int r = 0;
     sendResponse(fd, r);
     return -1;
   }
+
+  //se mi sono stati richiesti n file:
 
   if (flags == 0 || flags > currNFile)
     actualN = currNFile;
@@ -592,8 +646,10 @@ int ReadFromStorage(char* name, int flags, int fd) {
     }
       // TODO scorrere aux 
     // invalid operation file locked
+    UNLOCKR(&(storageMutex), -3);
     return -3;
   }
+  UNLOCKR(&(storageMutex), -3);
   return 0;
 }
 
@@ -601,7 +657,10 @@ int ReadFromStorage(char* name, int flags, int fd) {
 int LockInStorage(char* name, int fd) {
   // controllo il flag di lock o lo setto o mi metto in coda
 
+  LOCKR(&(storageMutex), -3);
   File* f = findFile(name);
+  if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
+  
   if (f == NULL) {
    
     return -1;
@@ -610,12 +669,12 @@ int LockInStorage(char* name, int fd) {
 
 
   if (f->lock == fd) {
-
+    if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
     return 0;
   }
   if (f->lock == -1) {
     f->lock = fd;
-
+    if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
     printf("file %s lockato da client %d\n", f->name,fd);
     
     return 0;
@@ -626,7 +685,7 @@ int LockInStorage(char* name, int fd) {
   newC->nextC = NULL;
 
   addClient(&(f->lockReqs), newC);
-
+  if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
 
   return 1;
 
@@ -635,8 +694,10 @@ int LockInStorage(char* name, int fd) {
 
 int UnlockInStorage(char* name, int fd) {
   // controllo che il file esista
-
+  LOCKR(&(storageMutex), -3);
   File* f = findFile(name);
+  if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
+  
   if (f == NULL) {
   
     return -1;
@@ -644,7 +705,7 @@ int UnlockInStorage(char* name, int fd) {
   // controllo che sia stata effettuata prima una lock dal client c
 
   if (f->lock != fd) {
-  
+   if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
     return -3;
   }
   // se il file esiste lockato da fd
@@ -652,13 +713,16 @@ int UnlockInStorage(char* name, int fd) {
 
   if (f->lockReqs == NULL) {
     f->lock = -1;
-
+    if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
     return 0;
   }
 
   f->lock = f->lockReqs->fdC;
   Client* aux = f->lockReqs;
   f->lockReqs = f->lockReqs->nextC;
+
+  if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
+
   free(aux);
 
 
@@ -668,21 +732,20 @@ int UnlockInStorage(char* name, int fd) {
 }
 
 int DeleteFromStorage(char* name, int fd) {
-  File* prec = NULL;
 
- 
+  File* prec = NULL;
+  LOCKR(&(storageMutex), -3);
   File* f = findFileAndPrec(name, &prec);
   if (f == NULL) {
-   
+   UNLOCKR(&(storageMutex), -3);
     return -1;
   }
 
-
-
   if (f->lock != fd ) {
-
+    UNLOCKR(&(storageMutex), -3);
     return -3;
   }
+
   if (prec == NULL) {
     storageHead = f->nextFile;
   
@@ -694,7 +757,7 @@ int DeleteFromStorage(char* name, int fd) {
  
   currMem = currMem - f->dim;
   currNFile = currNFile - 1;
-
+  UNLOCKR(&(storageMutex), -1);
 
   printf("ATTUALMENTE: %d MEMORIA\n%d FILE\n\n",currMem,currNFile);
 

@@ -213,6 +213,7 @@ void printOp (const char*, char* f, int retvalue, int bytes);
   }   
 #define LOCKR(l, r)  if (pthread_mutex_lock(l)!=0)        {	\
     fprintf(stderr, "ERRORE FATALE lock\n");				\
+    printf("effettuata lock\n"); \
     return r;								\
   }   
 
