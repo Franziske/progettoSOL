@@ -159,14 +159,14 @@ int main(int argc, char* const* argv){
             }
             case 'p':{
                 // optional
-                CHECKERRE(print, 1, "Richiesta mal formata:-p duplicato");
+                CHECKERREC(print, 1, "Richiesta mal formata:-p duplicato");
                 print = 1;
                 printf("stampe abilitate\n");
                 break;
             }
             case 'f':{
                 // required
-                CHECKERRE(socketInzialized, 1, "Richiesta mal formata:-f duplicato");
+                CHECKERREC(socketInzialized, 1, "Richiesta mal formata:-f duplicato");
                 serverSocket = optarg;
                 printf("server socket inizializzata: %s\n", serverSocket);
                 socketInzialized = 1;
@@ -317,7 +317,7 @@ int main(int argc, char* const* argv){
             case 'd':{
                 //controllo che -d sia preceduto da una richiesta di lettura
                 aux = checkLastOp(reqs,Read);
-                CHECKERRE(aux ,NULL,
+                CHECKERREC(aux ,NULL,
                          "Richiesta mal formata: -d non preceduta da una lettura");
                 aux->dirTo = optarg;
                 break;
@@ -325,7 +325,7 @@ int main(int argc, char* const* argv){
             case 'D':{
                 //controllo che -D sia preceduto da una richiesta di scrittura
                  aux = checkLastOp(reqs,Write);
-                CHECKERRE(aux ,NULL,
+                CHECKERREC(aux ,NULL,
                          "Richiesta mal formata: -D non preceduta da una scrittura");
                 aux->dirTo = optarg; 
                 break;
@@ -389,8 +389,8 @@ int main(int argc, char* const* argv){
 
                 }
                 //posso avere n invece che il nome del file
-               // CHECKERRE(reqs->files,NULL,"Richiesta writeFile malformata\n");
-                //CHECKERRE(reqs->files->name,NULL,"Richiesta writeFile malformata\n");
+               // CHECKERREC(reqs->files,NULL,"Richiesta writeFile malformata\n");
+                //CHECKERREC(reqs->files->name,NULL,"Richiesta writeFile malformata\n");
             
                 result = 0;
                 aux_p = reqs->files;
@@ -431,8 +431,8 @@ int main(int argc, char* const* argv){
 
                 printf("Richiesta read\n");
 
-                //CHECKERRE(reqs->files,NULL,"Richiesta readFile malformata");
-                //CHECKERRE(reqs->files->name,NULL,"Richiesta readFile malformata");
+                //CHECKERREC(reqs->files,NULL,"Richiesta readFile malformata");
+                //CHECKERREC(reqs->files->name,NULL,"Richiesta readFile malformata");
                 /*if(reqs->files == NULL){
                      fprintf(stderr, "richiestra read malformata ");
                     exit(EXIT_FAILURE);
@@ -510,8 +510,8 @@ int main(int argc, char* const* argv){
             }
             case Lock:{
                 result = 0;
-                CHECKERRE(reqs->files,NULL,"Richiesta lockFile malformata");
-                CHECKERRE(reqs->files->name,NULL,"Richiesta lockFile malformata");
+                CHECKERREC(reqs->files,NULL,"Richiesta lockFile malformata");
+                CHECKERREC(reqs->files->name,NULL,"Richiesta lockFile malformata");
                 result = lockFile(reqs->files->name);
                 if(print){
                     printOp("Lock", reqs->files->name,result,0);
@@ -521,8 +521,8 @@ int main(int argc, char* const* argv){
             }
             case Unlock:{
                 result = 0;
-                CHECKERRE(reqs->files,NULL,"Richiesta unlockFile malformata");
-                CHECKERRE(reqs->files->name,NULL,"Richiesta unlockFile malformata");
+                CHECKERREC(reqs->files,NULL,"Richiesta unlockFile malformata");
+                CHECKERREC(reqs->files->name,NULL,"Richiesta unlockFile malformata");
                 result = unlockFile(reqs->files->name);
                 if(print){
                     printOp("Unlock", reqs->files->name,result,0);
@@ -531,8 +531,8 @@ int main(int argc, char* const* argv){
             break;
             }
             case Cancel:{
-                CHECKERRE(reqs->files,NULL,"Richiesta removeFile malformata");
-                CHECKERRE(reqs->files->name,NULL,"Richiesta removeFile malformata");
+                CHECKERREC(reqs->files,NULL,"Richiesta removeFile malformata");
+                CHECKERREC(reqs->files->name,NULL,"Richiesta removeFile malformata");
                 
                 result = 0;
                 aux_p = reqs->files;

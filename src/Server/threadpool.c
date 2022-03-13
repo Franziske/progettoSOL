@@ -155,6 +155,7 @@ static void *workerFun(void *threadpool) {
 
     switch (req->op) {
       case OF: {
+        printf("richiesta open\n");
         res = OpenInStorage(req->fileName, req->dim, req->flags, req->client);
         // controlla errori send
         sendResponse(fdC, res);
@@ -198,6 +199,7 @@ static void *workerFun(void *threadpool) {
           // controlla errori send
           sendResponse(fdC, res);
           int r = write(pool->fdsPipe, &fdC, sizeof(int));
+          free(req->fileName);
           // check write
         }
         // se res == 1 la richiesta di lock è memorizzata nella coda del file
@@ -208,6 +210,7 @@ static void *workerFun(void *threadpool) {
         res = UnlockInStorage(req->fileName, req->client);
         sendResponse(fdC, res);
         int r = write(pool->fdsPipe, &fdC, sizeof(int));
+        free(req->fileName);
         // check write
         break;
       }

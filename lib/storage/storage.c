@@ -287,6 +287,7 @@ File* FindVictims(int n, int fd, int* victimsCount) {
 int OpenInStorage(char* name, int dim, int flags, int fd) {
   LOCKR(&(storageMutex), -3);
   File* f = findFile(name);
+  if(f != NULL) lockToModify(f);
   if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
   
 
@@ -307,7 +308,7 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
     // controlle che il file non esista già
     // altrimenti errore
     if (f != NULL) {
-
+      unlockToModify(f);
      if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
       free(name);
       
@@ -393,13 +394,16 @@ int CloseInStorage(char* name, int fd) {
 
   LOCKR(&(storageMutex), -3);
   File* f = findFile(name);
+
+  if (f == NULL) {
+    UNLOCKR(&(storageMutex), -3);
+    return -1;
+    }
+    lockToModify(f);
+
   if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
   
-  if (f == NULL) {
-
-    printf("il file non esiste \n");
-    return -1;
-  }
+  
   // controllo che sia stata effettuata prima una open dal client c
 
 
@@ -409,21 +413,21 @@ int CloseInStorage(char* name, int fd) {
   if (f->lock == fd) {
     if (f->lockReqs == NULL) {
       f->lock = -1;
+      unlockToModify(f);
       if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
-      return 0;
+      return res;
     } else {
       f->lock = f->lockReqs->fdC;
       Client* aux = f->lockReqs;
       f->lockReqs = f->lockReqs->nextC;
       free(aux);
       sendResponse(f->lock, 0);
+      unlockToModify(f);
     }
   
   }
   if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
   return res;
-
-  // se il file esiste aperto da fd lo chiudo
 
 }
 
@@ -440,6 +444,7 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
 
   printf("file letto  res = %d\n", res);
 
+  //se la dimensione del file è maggiore della capacità dello storage
   if (dim > capacity) {
     free(buff);
     int r = -5;
@@ -453,14 +458,16 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
 
   LOCKR(&(storageMutex), -3);
   File* f = findFile(name);
-  if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
-  
-  if (f == NULL) {
+    if (f == NULL) {
     printf("file non trovato\n");
+    UNLOCKR(&(storageMutex), -3);
     return -1;
   }
+  lockToModify(f);
+  if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
 
   if (f->lock != fd) {
+    unlockToModify(f);
     if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
     printf("file trovato ma senza lock da fd\n");
 
@@ -468,7 +475,6 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
   }
   printf("Tutto bene lock=%d e fd=%d\n", f->lock, fd);
 
-      printf("Res della unlock %d\n", res);
   // il file è esplicitamente loccato da fd tramite il flag
 
   // controllo che il client abbia aperto il file
@@ -479,6 +485,7 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
     aux = aux->nextC;
   }
   if (aux == NULL) {
+    unlockToModify(f);
     printf("file trovato ma non aperto da fd\n");
    if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
     return -3;
@@ -502,6 +509,10 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
 
   UNLOCKR(&(storageMutex), -1);
 
+
+  f->dim = dim;
+  f->buff = buff;
+  unlockToModify(f);
 
   // invio al client il numero di file vittima
   int err;
@@ -536,8 +547,6 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
     }
   }
 
-  f->dim = dim;
-  f->buff = buff;
 
   printf("ATTUALMENTE: %d MEMORIA\n%d FILE\n\n",currMem,currNFile);
    printf("DIMENSIONE FILE %d \n", f->dim);
@@ -557,22 +566,22 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
 int ReadFromStorage(char* name, int flags, int fd) {
   // controllo che il file esista
 
-  printf("numero corrente di file nello storage %d\n",currNFile);
 
   if (flags == -1) {
 
     LOCKR(&(storageMutex), -3);
     File* f = findFile(name);
-    if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
   
     if (f == NULL) {
- 
-      return -1;
+    UNLOCKR(&(storageMutex), -3);
+    return -1;
     }
+    lockToModify(f);
+    if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
 
     // il file è esplicitamente lockato da fd
     if (f->lock == fd){
-      
+      unlockToModify(f);
       int res = sendFile(f, fd);
       if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
       return res;
@@ -582,6 +591,7 @@ int ReadFromStorage(char* name, int flags, int fd) {
     if (f->lock == -1) {
    
       int res = sendFile(f, fd);
+      unlockToModify(f);
       if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
       return res;
     }
@@ -590,11 +600,11 @@ int ReadFromStorage(char* name, int flags, int fd) {
     if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
     return -3;
   }
+
+
   // altrimenti il valore di flags è il numero che viene richiesto di file da
   // leggere
   int actualN;  // numero di file realmente inviati al client
-
-
 
   //se non ci sono file da leggere nello storage
 
@@ -615,10 +625,20 @@ int ReadFromStorage(char* name, int flags, int fd) {
     actualN = flags;
   }
 
+  int availableCount = 0;
+  File* aux = storageHead;
+  while (aux!= NULL && availableCount < actualN){
+    if (aux->lock == fd || aux->lock == -1) availableCount ++;
+
+    aux = aux->nextFile; 
+  }
+
+  actualN = availableCount;
+
   printf("\t sto per inviare %d file", actualN);
 
 
-   File* aux = storageHead;
+  aux = storageHead;
    printf("storage head name %s\n", aux->name);
 
   sendResponse(fd, actualN);
@@ -644,6 +664,9 @@ int ReadFromStorage(char* name, int flags, int fd) {
       
       // return res;
     }
+    //lock appertenente ad un altro client 
+
+
       // TODO scorrere aux 
     // invalid operation file locked
     UNLOCKR(&(storageMutex), -3);
@@ -659,21 +682,26 @@ int LockInStorage(char* name, int fd) {
 
   LOCKR(&(storageMutex), -3);
   File* f = findFile(name);
-  if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
-  
-  if (f == NULL) {
    
+   if (f == NULL) {
+    UNLOCKR(&(storageMutex), -3);
     return -1;
   }
+  lockToModify(f);
+
+  if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
+  
   // provo ad acquisire la lock
 
 
   if (f->lock == fd) {
+    unlockToModify(f);
     if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
     return 0;
   }
   if (f->lock == -1) {
     f->lock = fd;
+    unlockToModify(f);
     if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
     printf("file %s lockato da client %d\n", f->name,fd);
     
@@ -685,6 +713,7 @@ int LockInStorage(char* name, int fd) {
   newC->nextC = NULL;
 
   addClient(&(f->lockReqs), newC);
+   unlockToModify(f);
   if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
 
   return 1;
@@ -696,15 +725,20 @@ int UnlockInStorage(char* name, int fd) {
   // controllo che il file esista
   LOCKR(&(storageMutex), -3);
   File* f = findFile(name);
-  if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
-  
+
   if (f == NULL) {
-  
+
+    UNLOCKR(&(storageMutex), -3);
     return -1;
   }
+  lockToModify(f);
+
+  if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
+
   // controllo che sia stata effettuata prima una lock dal client c
 
   if (f->lock != fd) {
+    unlockToModify(f);
    if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
     return -3;
   }
@@ -713,6 +747,7 @@ int UnlockInStorage(char* name, int fd) {
 
   if (f->lockReqs == NULL) {
     f->lock = -1;
+    unlockToModify(f);
     if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
     return 0;
   }
@@ -720,7 +755,7 @@ int UnlockInStorage(char* name, int fd) {
   f->lock = f->lockReqs->fdC;
   Client* aux = f->lockReqs;
   f->lockReqs = f->lockReqs->nextC;
-
+  unlockToModify(f);
   if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
 
   free(aux);
@@ -740,8 +775,12 @@ int DeleteFromStorage(char* name, int fd) {
    UNLOCKR(&(storageMutex), -3);
     return -1;
   }
+  
+  lockToModify(f);
 
   if (f->lock != fd ) {
+     unlockToModify(f);
+ 
     UNLOCKR(&(storageMutex), -3);
     return -3;
   }
@@ -750,7 +789,9 @@ int DeleteFromStorage(char* name, int fd) {
     storageHead = f->nextFile;
   
   } else {
+    lockToModify(prec);
     prec->nextFile = f->nextFile;
+    unlockToModify(prec);
   
     //  controllo anche la lock sul precedente?
   }
@@ -768,6 +809,8 @@ int DeleteFromStorage(char* name, int fd) {
   while (aux != NULL){
     sendResponse(aux->fdC, -1);
   }
+
+   unlockToModify(f);
   
 
   freeFile(f);

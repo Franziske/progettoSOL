@@ -146,11 +146,19 @@ void printOp (const char*, char* f, int retvalue, int bytes);
     }
 
 
+#define CHECKERREC(var,value,errString)\
+     if(var == value){      \
+         \
+        fprintf(stderr, errString); \
+        termination = 1;\
+        break;\
+    }
+
+
 #define CHECKERRE(var,value,errString)\
      if(var == value){      \
          \
         fprintf(stderr, errString); \
-        exit(EXIT_FAILURE);      \
     }
 
 #define CHECKERRNE(var,value,errString)\
