@@ -141,8 +141,7 @@ void printOp (const char*, char* f, int retvalue, int bytes);
 #define CHECKERRSC(var, value, errString) \
     if(var == value){      \
          \
-        perror(errString); \
-        exit(errno);  \     
+        perror(errString); \   
     }
 
 

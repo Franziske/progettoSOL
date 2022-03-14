@@ -19,10 +19,12 @@ pthread_mutex_t storageMutex;     // mutua esclusione sui parametri dello storag
 
 int lockToModify(File* f){
   LOCKR(&(f->modifyMutex), -1);
+  printf("\nLOCK su %s\n\n", f->name);
   return 0;
 }
 int unlockToModify(File* f){
   UNLOCKR(&(f->modifyMutex), -1);
+  printf("\nUNLOCK su %s\n\n", f->name);
   return 0;
 }
 
@@ -298,8 +300,9 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
     // controllo che il file sia presente nello storage
     // altrimenti errore
     if (f == NULL) {
-      if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
-      free(name);
+      if(f == storageHead || f == storageTail)
+        UNLOCKR(&(storageMutex), -3);
+      //free(name);
       return -1;
     }
   }
@@ -383,6 +386,8 @@ int OpenInStorage(char* name, int dim, int flags, int fd) {
 
 
   addClient(&(f->open), newC);
+
+  unlockToModify(f);
   printf("aggiungo fd a chi ha aperto il file \n");
 
   if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
@@ -459,8 +464,9 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
   LOCKR(&(storageMutex), -3);
   File* f = findFile(name);
     if (f == NULL) {
+      UNLOCKR(&(storageMutex), -3);
     printf("file non trovato\n");
-    UNLOCKR(&(storageMutex), -3);
+    
     return -1;
   }
   lockToModify(f);
@@ -566,7 +572,7 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
 int ReadFromStorage(char* name, int flags, int fd) {
   // controllo che il file esista
 
-
+  printf("sono nella read file \n");
   if (flags == -1) {
 
     LOCKR(&(storageMutex), -3);
@@ -576,7 +582,10 @@ int ReadFromStorage(char* name, int flags, int fd) {
     UNLOCKR(&(storageMutex), -3);
     return -1;
     }
+
+    printf("ho trovato il file lock su mutex\n");
     lockToModify(f);
+    
     if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
 
     // il file è esplicitamente lockato da fd
@@ -589,7 +598,7 @@ int ReadFromStorage(char* name, int flags, int fd) {
 
  
     if (f->lock == -1) {
-   
+      printf("pre invio file\n");
       int res = sendFile(f, fd);
       unlockToModify(f);
       if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);

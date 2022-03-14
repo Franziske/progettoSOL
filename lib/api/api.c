@@ -150,7 +150,7 @@ int receiveAndSaveFile(const char* dirname) {
 // restituisce il numero di bytes letti
 int getFile(void** buffer, const char* fileName) {
   FILE* ifp = fopen(fileName, "rb");
-  CHECKERRSC(ifp, NULL, "fopen failed");
+  CHECKERRSC(ifp, NULL, "Errore fopen: ");
   if (ifp == NULL) return -1;
 
   void* tmpBuff = malloc(NUM);
@@ -388,6 +388,10 @@ int writeFile(const char* pathname, const char* dirname) {
   void* buffer = NULL;
 
   int bytesRead = getFile(&buffer, pathname);
+  if (bytesRead == -1){
+    errno = ENOENT;
+    return -1;
+  }
   int res;
   if (dirname != NULL) res = sendRequest(W, bytesRead, pathname, 1);
   else res = sendRequest(W, bytesRead, pathname, 0);
