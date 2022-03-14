@@ -29,6 +29,7 @@ int readRequest(int fd_c, ServerRequest *req) {
 
     // se leggo op == 0 un client si è disconnesso
     printf("\t\t\tUser disconnesso\n");
+    removeFd(fd_c);
     return -1;
   }
   printf("ricevuto: name=%s\n", (char *)name);

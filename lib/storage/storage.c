@@ -57,6 +57,42 @@ int unlockToRead(File* f){
 
 }
 
+// rimuove il fd del client disconnesso
+
+int removeFd(int fd){
+  LOCKR(&storageMutex, -1);
+  File* aux = storageHead;
+
+  while (aux != NULL){
+    removeClient(&(aux->open), fd);
+    removeClient(&(aux->lockReqs), fd);
+    if(aux->lock == fd){
+
+      if (aux->lockReqs == NULL) {
+        aux->lock = -1;
+      }
+
+      else{ 
+        aux->lock = aux->lockReqs->fdC;
+        Client* aux1 = aux->lockReqs;
+        aux->lockReqs = aux->lockReqs->nextC;
+
+        free(aux1);
+
+
+        sendResponse(aux->lock, 0);
+      }
+    }
+    aux = aux->nextFile;
+  }
+
+  UNLOCKR(&storageMutex, -1);
+  return 0;
+
+}
+
+
+
 // inizializzo le variabili globali
 int storageInit(int c, int m) {
   capacity = c;
