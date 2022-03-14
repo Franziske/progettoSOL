@@ -23,6 +23,9 @@ typedef struct file_t{
 
 }File;
 
+
+int removeFd(int fd);
+
 int storageInit(int c,int m);
 
 int OpenInStorage(char* name, int dim, int flags, int fd);
