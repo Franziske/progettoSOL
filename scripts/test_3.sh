@@ -13,15 +13,9 @@ do
 
     # fai partire i client
     for filename in input/*; do
-        ./bin/client.out -f ./mysock -W $filename &
-    done
-
-    for filename in input/*; do
-        ./bin/client.out -f ./mysock -W $filename &
+        ./bin/client.out -f ./mysock -W $filename -l $filename -u $filename -r $filename -l $filename -c $filename&
     done
     
-    for filename in input/*; do
-        ./bin/client.out -f ./mysock -W $filename &
-    done
+    
 done
 echo "End"
