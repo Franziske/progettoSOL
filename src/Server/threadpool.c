@@ -52,6 +52,7 @@ Client *getRequest(Threadpool *pool) {
   while ((pool->queue) == NULL) {
     // se ho finito le richieste in sospeso e devo terminare
     // invio il segnale per il server sulla pipe e restituisco null al worker
+    printf("sigterm %d \n", pool->termSig);
 
     if (pool->termSig == 2 || pool->termSig == 3) {
       pthread_mutex_unlock(&(pool->lock));
@@ -63,7 +64,11 @@ Client *getRequest(Threadpool *pool) {
 
     //???????????
 
+    printf("sigterm %d \n", pool->termSig);
+
     if (pool->termSig == 1) {
+
+      pthread_mutex_unlock(&(pool->lock));
       int endOfReqSig = -1;
       write(pool->fdsPipe, &endOfReqSig, sizeof(int));
     }
@@ -240,7 +245,8 @@ static void *workerFun(void *threadpool) {
     free(c);
     free(req);
 
-    if (closeConn == 1) close(fdC);
+    if (closeConn == 1)
+      close(fdC);
   }
 
   return NULL;
@@ -299,6 +305,11 @@ int terminationProtocol(Threadpool *pool, int signal) {
   pthread_mutex_lock(&(pool->lock));
 
   pool->termSig = signal;
+  if (pthread_cond_broadcast(&(pool->cond)) != 0) {
+    pthread_mutex_unlock(&(pool->lock));
+    errno = EFAULT;
+    return -1;
+  }
 
   pthread_mutex_unlock(&(pool->lock));
   return 0;
@@ -311,7 +322,7 @@ int destroyThreadPool(Threadpool *pool) {
   }
 
   pthread_mutex_lock(&(pool->lock));
-
+  pool->termSig = 2;
   printf("sto deallocando threadpool\n");
 
   // forse prima devo fare la join dei thread
@@ -324,6 +335,7 @@ int destroyThreadPool(Threadpool *pool) {
   pthread_mutex_unlock(&(pool->lock));
 
   for (int i = 0; i < pool->nWorker; i++) {
+    printf("terminazione thread %d\n  ",i);
     if (pthread_join(pool->threads[i], NULL) != 0) {
       errno = EFAULT;
       pthread_mutex_unlock(&(pool->lock));

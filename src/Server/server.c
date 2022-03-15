@@ -53,6 +53,8 @@ static void *sigHandler(void *arg) {
             return NULL;
         }
 
+        printf("\n RICEVUTO SEGNALE %d \n", sig);
+
         switch(sig) {
         case SIGINT:
         case SIGQUIT:
@@ -146,7 +148,7 @@ int main(int argc, char const *argv[])
     CHECKERRSC(err,-1,"Errore sigaddset: ");
     err = sigaddset(&mask, SIGQUIT); 
     CHECKERRSC(err,-1,"Errore sigaddset: ");
-    err = sigaddset(&mask, SIGTERM); 
+    err = sigaddset(&mask, SIGHUP); 
     CHECKERRSC(err,-1,"Errore sigaddset: ");
 
     err = pthread_sigmask(SIG_BLOCK, &mask,NULL);
@@ -222,19 +224,16 @@ int main(int argc, char const *argv[])
 
     fdmax = (fdmax > fds_pipe[0]) ? fdmax : fds_pipe[0];
 
-    while(!termina) {
+    int initialFdmax = fdmax;
+
+    while(termina <2) {
         // copio il set nella variabile temporanea per la select
         tmpset = set;
 
         printf("fdmax prima della select = %d\n", fdmax);
-
+       
         
         err = select(fdmax+1, &tmpset, NULL, NULL, NULL);
-
-
-
-
-        printf("%d err \n",err);
         CHECKERRSC(err,-1, "Errore select: ");
 
         printf("postselect\n");
@@ -282,9 +281,11 @@ int main(int argc, char const *argv[])
                     int sig;
                     read(signal_pipe[0], &sig, sizeof(int));
                     termina = sig;
+                     printf("\nterminando con sig: %d\n", termina);
                     // non permetto nuove connessioni
                     FD_CLR(listenfd,&set);
                     close(listenfd);
+                     printf("\nterminando con sig: %d\n", termina);
 
                     if(sig == 2 || sig == 3){
                         //chiudo le connessioni che non hanno richieste in sospeso
@@ -298,9 +299,10 @@ int main(int argc, char const *argv[])
                             }
                         }
                     }
-
-                    terminationProtocol(pool, sig);
+                    FD_CLR(signal_pipe[0],&set);
                     printf("\nterminando con sig: %d\n", termina);
+                    terminationProtocol(pool, sig);
+                    
                    // break;
                    continue;
                 }
@@ -313,10 +315,10 @@ int main(int argc, char const *argv[])
                     err = read(fds_pipe[0], &clientBack, sizeof(int));
                     
                     CHECKERRSC(err,-1,"Errore read da pipe: ");
-                    //if(clientBack == 0 );
+                   
 
                     //se non devo terminare il server immediatamente reinserisco fd
-                    if(termina != 2 && termina != 3){
+                    if(termina != 2 && termina != 3 && clientBack > 0){
                         FD_SET(clientBack, &set);
 
                         if(clientBack > fdmax) fdmax = clientBack;
@@ -326,16 +328,19 @@ int main(int argc, char const *argv[])
                     }
                     
                     if(clientBack == -1){
+
+                        printf("terminate le richieste in sospeso\n");
+                        printf("fd max = %d, fd max iniz = %d termina = %d\n", fdmax, initialFdmax, termina);
                         //sono terminate le richieste che erano in sospeso 
                         //se ho chiusura immediata breaK
-                        if(termina != -1)break;
+                        if(termina != 1)break;
+
                         //se tutti i client devono aver chiuso la connessione controllo i fd
-                        int j = 0;
-                        while(j <= fdmax){
-                            if(FD_ISSET(j,&set) && j!= fds_pipe[0]) break;
-                            j++;
+                        if(fdmax <= initialFdmax){
+                            termina = 2;
+                            break;
                         }
-                        if(j > fdmax)break; //non ho più nessun client ne' fra le richieste in sospeso
+                        //non ho più nessun client ne' fra le richieste in sospeso
                                             //ne' fra le connessioni in attesa di richieste
 
                         //non ho più richieste in sospeso ma altre connessioni non chiuse con dei client

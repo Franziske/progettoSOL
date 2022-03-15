@@ -43,10 +43,9 @@ test_server: clean all
 
 test1: all
 	@echo "Test 1 start"
-	valgrind --leak-check=full --show-leak-kinds=all --log-file="valgrind.log" bin/server.out configs/config1.ini > server.log 2>&1 &	 echo "$$!" > "server.pid"
+	valgrind --leak-check=full --show-leak-kinds=all  bin/server.out configs/config1.ini & echo "$$!" > "server.pid"
 	./scripts/test_1.sh
 	cat server.pid | xargs kill -1
-	tail valgrind.log
 	@echo "\nTest 1 end"
 
 test2: all
