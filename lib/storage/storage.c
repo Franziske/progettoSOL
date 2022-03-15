@@ -163,7 +163,17 @@ int addFile(File* newFile) {
 void freeFile(File* f) {
   free(f->name);
   free(f->buff);
+  Client* aux = f->open;
+  while(f->open != NULL){
+    f->open = f->open->nextC;
+    free(aux);
+  }
 
+  aux = f->lockReqs;
+   while(f->lockReqs != NULL){
+    f->lockReqs = f->lockReqs->nextC;
+    free(aux);
+  }
   free(f);
 }
 
