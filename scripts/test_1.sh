@@ -1,7 +1,5 @@
 #!/bin/bash
-echo "Test 1 starting..."
-sleep 5
-for filename in input/subdir2/*; do
-    ./bin/client.out -t 100 -f ./mysock -W $filename
-done
 
+
+# parto scrivendo sul server ricorsivamente tutti i file presenti sotto input
+./bin/client.out -p -t 200 -f ./mysock -w input 

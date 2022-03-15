@@ -10,6 +10,8 @@ BIN			= bin
 ZIP			= francesca_ugazio-CorsoA
 TARGETS		= c server client
 
+.PHONY: c clean server all zip
+
 all:	$(TARGETS)
 
 ini:
@@ -40,21 +42,21 @@ test_server: clean all
 	valgrind -s --leak-check=full --show-leak-kinds=all  bin/server.out configs/config.ini
 
 test1: all
-	valgrind -s --leak-check=full --show-leak-kinds=all  bin/server.out configs/config1.ini & echo "$$!" > "server.pid"
+	@echo "Test 1 start"
+	valgrind --leak-check=full --show-leak-kinds=all --log-file="valgrind.log" bin/server.out configs/config1.ini > server.log 2>&1 &	 echo "$$!" > "server.pid"
 	./scripts/test_1.sh
 	cat server.pid | xargs kill -1
+	tail valgrind.log
+	@echo "\nTest 1 end"
 
 test2: all
-	valgrind -s --leak-check=full --show-leak-kinds=all  bin/server.out configs/config2.ini & echo "$$!" > "server.pid"
+	valgrind -s --leak-check=full --show-leak-kinds=all  bin/server.out configs/config2.ini & echo "$!" > "server.pid"
 	./scripts/test_2.sh
 	cat server.pid | xargs kill -1
 
-
 clean:
 	@echo Clean
-	-rm -rf $(OBJ)/* $(BIN)/* mysock *.pid
+	-rm -rf $(OBJ)/* $(BIN)/* mysock *.pid *.log
 	@echo Done
 
 c: clean
-
-.PHONY: c clean server all zip
