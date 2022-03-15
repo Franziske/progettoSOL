@@ -107,6 +107,7 @@ void freeRequests(Request** list){
     Request*aux;
     while(*list != NULL){
         aux = *list;
+        printf("sto cancellando la richiesta: %d\n", aux->op);
         *list = aux->next;
         if(aux->dirFrom != NULL)free(aux->dirFrom);
         if(aux->dirTo != NULL)free(aux->dirTo);

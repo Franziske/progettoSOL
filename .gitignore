@@ -3,3 +3,5 @@ obj/*
 *.o
 configs/config.ini
 *.pid
+direc/*
+input/*
