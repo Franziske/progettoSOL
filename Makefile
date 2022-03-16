@@ -41,17 +41,25 @@ server: ini utils threadpool storage
 test_server: clean all
 	valgrind -s --leak-check=full --show-leak-kinds=all  bin/server.out configs/config.ini
 
-test1: all
+test1: clean all
 	@echo "Test 1 start"
 	valgrind --leak-check=full --show-leak-kinds=all  bin/server.out configs/config1.ini & echo "$$!" > "server.pid"
 	./scripts/test_1.sh
 	cat server.pid | xargs kill -1
 	@echo "\nTest 1 end"
 
-test2: all
-	valgrind -s --leak-check=full --show-leak-kinds=all  bin/server.out configs/config2.ini & echo "$!" > "server.pid"
+test2: clean all
+	valgrind -s --leak-check=full --show-leak-kinds=all  bin/server.out configs/config2.ini & echo "$$!" > "server.pid"
 	./scripts/test_2.sh
+	sleep 5
 	cat server.pid | xargs kill -1
+
+test3: clean all
+	valgrind -s --leak-check=full --show-leak-kinds=all  bin/server.out configs/config3.ini & echo "$$!" > "server.pid"
+	./scripts/test_3.sh
+	sleep 5
+	cat server.pid | xargs kill -2
+
 
 clean:
 	@echo Clean

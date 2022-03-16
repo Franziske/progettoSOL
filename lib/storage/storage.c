@@ -183,10 +183,7 @@ void freeFile(File* f) {
 
 File* findFileAndPrec(char* nameF, File** prec) {
 
-   //LOCKR(&(storageMutex), -1);
-
   if (storageHead == NULL) {
-    //UNLOCKR(&(storageMutex),NULL);
      return NULL;
   }
 
@@ -197,27 +194,15 @@ File* findFileAndPrec(char* nameF, File** prec) {
 
   }
 
-  if(storageHead->nextFile == NULL){
-    //UNLOCKR(&(storageMutex), -1);
-    return NULL;
-  }
-
-  if (strncmp(storageHead->nextFile->name, nameF, strlen(nameF) + 1) == 0) {
-    *prec = storageHead;
-  
-    return storageHead->nextFile;
-
-  }
-
-  *prec = storageHead->nextFile;
-  File* aux = (*prec)->nextFile;  
+  *prec = storageHead;
+  File* aux = storageHead->nextFile;  
 
 
   while (aux != NULL) {
 
 
     if (strncmp(aux->name, nameF, strlen(nameF) + 1) == 0) {
-      //if(aux != storageTail)UNLOCKR(&(storageMutex), -1);
+     
       return aux;
     
     
@@ -225,7 +210,7 @@ File* findFileAndPrec(char* nameF, File** prec) {
     (*prec) = aux;
     aux = aux->nextFile;
   }
-  //if((*prec) == storageTail) UNLOCKR(&(storageMutex), -1);
+  
   return NULL;
 }
 
@@ -559,6 +544,11 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
   currNFile ++;
   currMem = currMem + dim;
 
+   printf("ATTUALMENTE: %d MEMORIA\n%d FILE\n\n",currMem,currNFile);
+   printf("DIMENSIONE FILE %d \n", f->dim);
+
+   printf("testa: %s \n coda:%s\n\n",storageHead->name,storageTail->name);
+
   UNLOCKR(&(storageMutex), -1);
 
 
@@ -600,8 +590,7 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
   }
 
 
-  printf("ATTUALMENTE: %d MEMORIA\n%d FILE\n\n",currMem,currNFile);
-   printf("DIMENSIONE FILE %d \n", f->dim);
+ 
   return 0;
 
   // controlla res
@@ -827,9 +816,14 @@ int DeleteFromStorage(char* name, int fd) {
   LOCKR(&(storageMutex), -3);
   File* f = findFileAndPrec(name, &prec);
   if (f == NULL) {
+    printf("file inesistente nelle storage\n");
    UNLOCKR(&(storageMutex), -3);
     return -1;
   }
+
+   printf("testa: %s \n coda:%s\n\n",storageHead->name,storageTail->name);
+
+  if(f!=NULL) printf("file da cancellare %s\n", f->name);
   
   lockToModify(f);
 
@@ -853,9 +847,11 @@ int DeleteFromStorage(char* name, int fd) {
  
   currMem = currMem - f->dim;
   currNFile = currNFile - 1;
+  printf("DOPO DELETE: %d MEMORIA\n%d FILE\n\n",currMem,currNFile);
+ 
   UNLOCKR(&(storageMutex), -1);
 
-  printf("ATTUALMENTE: %d MEMORIA\n%d FILE\n\n",currMem,currNFile);
+  
 
   //se ho richieste pendenti di lock sul file che sto eleminando
   //riferisco ai client che il file non esiste più

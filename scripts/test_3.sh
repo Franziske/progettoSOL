@@ -12,8 +12,9 @@ do
     diff=$(($end - $start))
 
     # fai partire i client
-    for filename in input/*; do
-        ./bin/client.out -f ./mysock -W $filename -l $filename -u $filename -r $filename -l $filename -c $filename&
+    for filename in input/*.txt; do
+        ./bin/client.out -f ./mysock -W $filename -l $filename -u $filename -l $filename -c $filename&
+    sleep 1
     done
     
     

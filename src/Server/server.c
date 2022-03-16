@@ -241,7 +241,9 @@ int main(int argc, char const *argv[])
 
         // cerchiamo di capire da quale fd abbiamo ricevuto una richiesta
         for(int i=0; i <= fdmax; i++) {
-        //while(i<=fdmax){
+        
+            if(termina == 2 || termina == 3) break;
+
             int isset = FD_ISSET(i, &tmpset);
             
             if (isset) {
@@ -281,11 +283,11 @@ int main(int argc, char const *argv[])
                     int sig;
                     read(signal_pipe[0], &sig, sizeof(int));
                     termina = sig;
-                     printf("\nterminando con sig: %d\n", termina);
+                    
                     // non permetto nuove connessioni
                     FD_CLR(listenfd,&set);
                     close(listenfd);
-                     printf("\nterminando con sig: %d\n", termina);
+                 
 
                     if(sig == 2 || sig == 3){
                         //chiudo le connessioni che non hanno richieste in sospeso
@@ -302,6 +304,8 @@ int main(int argc, char const *argv[])
                     FD_CLR(signal_pipe[0],&set);
                     printf("\nterminando con sig: %d\n", termina);
                     terminationProtocol(pool, sig);
+
+                    printf("chiamato protocollo di terminazione\n");
                     
                    // break;
                    continue;
@@ -338,6 +342,7 @@ int main(int argc, char const *argv[])
                         //se tutti i client devono aver chiuso la connessione controllo i fd
                         if(fdmax <= initialFdmax){
                             termina = 2;
+                            terminationProtocol(pool,2);
                             break;
                         }
                         //non ho più nessun client ne' fra le richieste in sospeso
@@ -383,6 +388,7 @@ int main(int argc, char const *argv[])
           
         }
     }
+    
     printf("protocollo di terminazione\n");
 
     

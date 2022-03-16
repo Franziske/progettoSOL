@@ -55,11 +55,21 @@ Client *getRequest(Threadpool *pool) {
     printf("sigterm %d \n", pool->termSig);
 
     if (pool->termSig == 2 || pool->termSig == 3) {
+        if (pthread_cond_broadcast(&(pool->cond)) != 0) {
+    pthread_mutex_unlock(&(pool->lock));
+    errno = EFAULT;
+    return -1;
+  }
+
+  printf("post broadcast\n");
+
       pthread_mutex_unlock(&(pool->lock));
 
       int endOfReqSig = -1;
       write(pool->fdsPipe, &endOfReqSig, sizeof(int));
-      return NULL;
+
+      printf("Un thread è terminato \n");
+      return 0;
     }
 
     //???????????
@@ -67,6 +77,13 @@ Client *getRequest(Threadpool *pool) {
     printf("sigterm %d \n", pool->termSig);
 
     if (pool->termSig == 1) {
+        if (pthread_cond_broadcast(&(pool->cond)) != 0) {
+    pthread_mutex_unlock(&(pool->lock));
+    errno = EFAULT;
+    return -1;
+  }
+
+  printf("post broadcast\n");
 
       pthread_mutex_unlock(&(pool->lock));
       int endOfReqSig = -1;
@@ -315,6 +332,10 @@ int terminationProtocol(Threadpool *pool, int signal) {
   return 0;
 }
 
+
+
+
+
 int destroyThreadPool(Threadpool *pool) {
   if (pool == NULL) {
     errno = EINVAL;
@@ -325,22 +346,26 @@ int destroyThreadPool(Threadpool *pool) {
   pool->termSig = 2;
   printf("sto deallocando threadpool\n");
 
-  // forse prima devo fare la join dei thread
-
   if (pthread_cond_broadcast(&(pool->cond)) != 0) {
     pthread_mutex_unlock(&(pool->lock));
     errno = EFAULT;
     return -1;
   }
+
+  printf("post broadcast\n");
   pthread_mutex_unlock(&(pool->lock));
 
   for (int i = 0; i < pool->nWorker; i++) {
+   
     printf("terminazione thread %d\n  ",i);
+
     if (pthread_join(pool->threads[i], NULL) != 0) {
       errno = EFAULT;
-      pthread_mutex_unlock(&(pool->lock));
+      //pthread_mutex_unlock(&(pool->lock));
       return -1;
     }
+    printf("terminato thread %d\n  ",i);
+  
   }
 
   if (pool->threads) {
