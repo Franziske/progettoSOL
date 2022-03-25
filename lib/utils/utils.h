@@ -9,7 +9,7 @@
 #include <dirent.h>
 
 
-//possibili operazioni lette dal client
+//possibili operazioni lato client
 typedef enum
 {
    Write,
@@ -17,7 +17,7 @@ typedef enum
    Lock,
    Unlock,
    Cancel,
-   Close
+   //Close
 } Operation;
 
 //possibili operazioni lette dal server
@@ -237,71 +237,5 @@ void printOp (const char*, char* f, int retvalue, int bytes);
     pthread_exit((void*)EXIT_FAILURE);				    \
   }
 
-// dal professore
-/*
-#define SYSCALL_EXIT(name, r, sc, str, ...)	\
-    if ((r=sc) == -1) {				\
-	perror(#name);				\
-	int errno_copy = errno;			\
-	print_error(str, __VA_ARGS__);		\
-	exit(errno_copy);			\
-    }
 
-#define SYSCALL_PRINT(name, r, sc, str, ...)	\
-    if ((r=sc) == -1) {				\
-	perror(#name);				\
-	int errno_copy = errno;			\
-	print_error(str, __VA_ARGS__);		\
-	errno = errno_copy;			\
-    }
-
-#define SYSCALL_RETURN(name, r, sc, str, ...)	\
-    if ((r=sc) == -1) {				\
-	perror(#name);				\
-	int errno_copy = errno;			\
-	print_error(str, __VA_ARGS__);		\
-	errno = errno_copy;			\
-	return r;                               \
-    }
-
-#define CHECK_EQ_EXIT(name, X, val, str, ...)	\
-    if ((X)==val) {				\
-        perror(#name);				\
-	int errno_copy = errno;			\
-	print_error(str, __VA_ARGS__);		\
-	exit(errno_copy);			\
-    }
-
-#define CHECK_NEQ_EXIT(name, X, val, str, ...)	\
-    if ((X)!=val) {				\
-        perror(#name);				\
-	int errno_copy = errno;			\
-	print_error(str, __VA_ARGS__);		\
-	exit(errno_copy);			\
-    }
-
-//controlla pthread mutex lock
-
-#define LOCK(l)      if (pthread_mutex_lock(l)!=0)        { \
-    fprintf(stderr, "ERRORE FATALE lock\n");		    \
-    pthread_exit((void*)EXIT_FAILURE);			    \
-  }   
-#define LOCK_RETURN(l, r)  if (pthread_mutex_lock(l)!=0)        {	\
-    fprintf(stderr, "ERRORE FATALE lock\n");				\
-    return r;								\
-  }   
-
-#define UNLOCK(l)    if (pthread_mutex_unlock(l)!=0)      {	    \
-    fprintf(stderr, "ERRORE FATALE unlock\n");			    \
-    pthread_exit((void*)EXIT_FAILURE);				    \
-  }
-#define UNLOCK_RETURN(l,r)    if (pthread_mutex_unlock(l)!=0)      {	\
-    fprintf(stderr, "ERRORE FATALE unlock\n");				\
-    return r;								\
-  }
-#define WAIT(c,l)    if (pthread_cond_wait(c,l)!=0)       {	    \
-    fprintf(stderr, "ERRORE FATALE wait\n");			    \
-    pthread_exit((void*)EXIT_FAILURE);				    \
-  }
-  */
  #endif

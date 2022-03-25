@@ -44,16 +44,12 @@ static void *sigHandler(void *arg) {
 
     while(1) {
         int sig;
-        printf("pre sigwait");
         int r = sigwait(set, &sig);
-            printf("post sigwait");
         if (r != 0) {
             errno = r;
             perror("Errore sigwait : ");
             return NULL;
         }
-
-        printf("\n RICEVUTO SEGNALE %d \n", sig);
 
         switch(sig) {
         case SIGINT:
@@ -86,8 +82,6 @@ int removeRequest(ServerRequest **list, ServerRequest **currReq)
 
 int main(int argc, char const *argv[])
 {
-
- 
     //numero di Workers
     int n;
 
@@ -105,30 +99,27 @@ int main(int argc, char const *argv[])
 
     const char *workersN = ini_get(config, NULL, "workersNumber");
     if (workersN) {
-        printf("numero di workers : %s\n", workersN);
 
         //converto in intero e assegno a N
         n = stringToInt(workersN);
-        printf("numero di workers : %d\n", n);
+        printf("numero di Workers : %d\n", n);
         
     }
     const char *c = ini_get(config, NULL, "storageCapacity");
     if (c) {
-        printf("capacity: %s\n", c);
 
         //converto in intero e assegno a capacity
         capacity = stringToInt(c);
-        printf("capacity: %d\n", capacity);
+        printf("capacità dello storage: %d\n", capacity);
 
     }
 
     const char *m = ini_get(config, NULL, "maxFiles");
     if (m) {
-        printf("max number of file: %s\n", m);
 
         //converto in intero e assegno a max
         max = stringToInt(m);
-         printf("max number of file: %d\n", max);
+         printf("numero massimo di file nello storage : %d\n", max);
     }
    ini_free(config);
 
@@ -187,8 +178,6 @@ int main(int argc, char const *argv[])
    listenfd= socket(AF_UNIX, SOCK_STREAM, 0);
    CHECKERRSC(listenfd, -1, "Errore socket: ");
 
-   printf("listenfd: %d\n", listenfd);
-
    struct sockaddr_un sa;
    memset(&sa, '0', sizeof(sa));
    strncpy(sa.sun_path, SOCKNAME, strlen(SOCKNAME)+1);
@@ -200,14 +189,13 @@ int main(int argc, char const *argv[])
    err = listen(listenfd, SOMAXCONN);
    CHECKERRSC(err, -1, "Errore listen: ");
 
-    printf("listenfd: %d\n", listenfd);
     Threadpool* pool = NULL;
 
     pool = createThreadPool(n, fds_pipe[1]); 
     // close(fds_pipe[1]);
 
     CHECKERRE(pool, NULL, "Errore nella creazione del pool di thread");
-    printf("creato thread pool\n");
+    printf("creato pool di thread\n");
     
 
 
@@ -258,22 +246,6 @@ int main(int argc, char const *argv[])
                     FD_SET(connfd, &set); 
                     if(connfd > fdmax) fdmax = connfd;
 
-                    /*int* args = malloc(2*sizeof(int));
-                    if (!args) {
-                    perror("Errore malloc");
-                    destroyThreadPool;
-                    unlink(SOCKNAME);
-                    return -1;
-                    }
-                    args[0] = connfd;
-                    args[1] = (int)&termina;
-                    
-                    int r =addToQueue(pool, args);
-                    if (r==0) continue; // aggiunto con successo
-                    fprintf(stderr, "Errore aggiungendo il fd %d alla coda delle richieste del thread pool\n", connfd);
-                    
-                    free(args);
-                    close(connfd);*/
                 
                     continue;
                 }
@@ -367,7 +339,6 @@ int main(int argc, char const *argv[])
                         if(FD_ISSET(j,&set) && j>newMax) newMax = j;
                         
                     }
-                    printf("aggiorno fd max \n");
                     fdmax = newMax;
                 }
                
@@ -393,6 +364,8 @@ int main(int argc, char const *argv[])
 
     
     destroyThreadPool(pool);  // notifico che i thread dovranno uscire
+
+    //close pipes
 
     // aspetto la terminazione de signal handler thread
     pthread_join(sighandler_thread, NULL);

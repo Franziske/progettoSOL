@@ -32,7 +32,7 @@ typedef struct Request{
     char* dirFrom;        //cartella dalla quale prendere i file da inviare al server
     char* dirTo;      //cartella nel quale salvare i file ricevuti dal server 
     string* files;   //lista di file sui quali eseguire l'operazione                                             
-    size_t filesNumber;
+    size_t filesNumber; //numero di file coinvolti nella richiesta
     struct Request* next;  //operazione successiva, vale NULL se non ce ne sono
 } Request;
 
@@ -48,10 +48,10 @@ size_t getList(const char* str, string** list){
 
     size_t subStrNumber = 0;
      while ((subString = strtok_r(aux, ",", &aux))!= NULL) {
-         printf("size of string %ld\n", strlen(subString));
-        printf("stringa letta : %s\n ", subString);
+         //printf("size of string %ld\n", strlen(subString));
+        //printf("stringa letta : %s\n ", subString);
        string* f = malloc(sizeof(string));
-       printf("size of string %ld\n\n", strlen(subString));
+       //printf("size of string %ld\n\n", strlen(subString));
        f->name = malloc(strlen(subString)*sizeof(char)+1);
        strcpy(f->name,subString);
        f->nextString = NULL;
@@ -416,14 +416,6 @@ int main(int argc, char* const* argv){
 
                 freeStringList(&(reqs->files));
             
-                /*if(reqs->dirFrom != NULL){
-                    // caso W
-
-
-                }
-                else{
-                    //caso w
-                }*/
 
             break;
             }
@@ -432,12 +424,6 @@ int main(int argc, char* const* argv){
 
                 printf("Richiesta read\n");
 
-                //CHECKERREC(reqs->files,NULL,"Richiesta readFile malformata");
-                //CHECKERREC(reqs->files->name,NULL,"Richiesta readFile malformata");
-                /*if(reqs->files == NULL){
-                     fprintf(stderr, "richiestra read malformata ");
-                    exit(EXIT_FAILURE);
-                }*/
                 aux_p = reqs->files;
               
                 if(reqs->files != NULL){
@@ -450,6 +436,9 @@ int main(int argc, char* const* argv){
                         result = openFile(aux_p->name, flags);
                         PRINTERRSC(result, -1, "Errore openFile: ",termination);
                             result = 0;
+                        if(print){
+                        printOp("Open", reqs->files->name,result,0);
+                        }
                         result = readFile(aux_p->name, &buffer, &dim);
                         printf("\n DIMENSIONE FILE %ld\n", dim);
                         if(filesReadNumber == FILECAPACITY){
@@ -492,11 +481,14 @@ int main(int argc, char* const* argv){
                         result = 0;
                         result = closeFile(aux_p->name);
                         PRINTERRSC(result, -1, "Errore closeFile: ",termination);
+                        if(print){
+                        printOp("Close", reqs->files->name,result,0);
+                        }
                         aux_p = aux_p->nextString;
                     }
                 }
                 else{
-                    //if(reqs->n > 0){
+                   
                         printf("richiesta lettura n files\n");
                         if(reqs->dirTo == NULL){
                             fprintf(stderr, "Errore lettura di n file: non è stata specificata la directory di salvataggio\n");
@@ -504,8 +496,10 @@ int main(int argc, char* const* argv){
                         }
                         result = readNFiles(reqs->n, reqs->dirTo);
                          PRINTERRSC(result, -1, "Errore readNFile: ",termination);
-                    //}
-                }
+                         if(print){
+                        printOp("Read N", reqs->files->name,result,0);
+                        }
+                    
 
             break;
             }
@@ -541,7 +535,6 @@ int main(int argc, char* const* argv){
                 
                 int flags = 3;
                 result = 0;
-                //result = lockFile(aux_p->name);
                 PRINTERRSC(result, -1, "Errore lockFile: ",termination);
                 result = 0;
                 result = removeFile(aux_p->name);
@@ -566,8 +559,7 @@ int main(int argc, char* const* argv){
     //rimuovo la richiesta dalla coda
     Request* aux = reqs;
     reqs = reqs->next;
-    //if(aux->dirFrom != NULL)free(aux->dirFrom);
-    //if(aux->dirTo != NULL)free(aux->dirTo);
+
     if(aux->files != NULL)freeStringList(&(aux->files));
     free(aux);
 
@@ -577,7 +569,7 @@ int main(int argc, char* const* argv){
     }
 
     printf("Terminando Client....");
-    if (termination == 1) printf("client terminato in seguito a errore \n");
+    if (termination == 1) printf("client terminato in seguito ad errore \n");
     freeRequests(&reqs);
     for(int i = 0; i < filesReadNumber; i++){
         free(filesRead[i]);

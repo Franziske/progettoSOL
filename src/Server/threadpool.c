@@ -72,16 +72,15 @@ Client *getRequest(Threadpool *pool) {
       return 0;
     }
 
-    //???????????
 
     printf("sigterm %d \n", pool->termSig);
 
     if (pool->termSig == 1) {
-        if (pthread_cond_broadcast(&(pool->cond)) != 0) {
-    pthread_mutex_unlock(&(pool->lock));
-    errno = EFAULT;
-    return -1;
-  }
+      if (pthread_cond_broadcast(&(pool->cond)) != 0) {
+      pthread_mutex_unlock(&(pool->lock));
+      errno = EFAULT;
+      return -1;
+     }
 
   printf("post broadcast\n");
 
@@ -151,7 +150,7 @@ int addToQueue(Threadpool *pool, int arg) {
 static void *workerFun(void *threadpool) {
   int res;
   int closeConn;
-  printf("sono un tread e sto funzionando\n");
+  
   Threadpool *pool = (Threadpool *)threadpool;
   // controlla != NULL
 

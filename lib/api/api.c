@@ -97,14 +97,12 @@ int receiveAndSaveFile(const char* dirname) {
     return -1;
   }
   name = malloc(nameLen);
-
-  printf("Pre lettura nome \n");
   res = readn(fdSkt, name, nameLen);
 
-  printf("post lettura nome\n");
+  
   if (res == -1) {
 
-    printf("CASO ERRORE\n");
+ 
     errno = ECOMM;
     return -1;
   }
@@ -187,8 +185,7 @@ accetta immediatamente la richiesta di connessione, la connessione da parte del
 client viene ripetuta dopo ‘msec’ millisecondi e fino allo scadere del tempo
 assoluto ‘abstime’ specificato come terzo argomento. Ritorna 0 in caso di
 successo, -1 in caso di fallimento, errno viene settato opportunamente.*/
-int openConnection(const char* sockname, int msec,
-                   const struct timespec abstime) {
+int openConnection(const char* sockname, int msec,const struct timespec abstime) {
   int res;
   struct timespec currSpec;
   printf("name skt : %s\n", sockname);
