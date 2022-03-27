@@ -92,6 +92,8 @@ int main(int argc, char const *argv[])
       fprintf(stderr, "Numero di argomenti non valido\n");
       exit(EXIT_FAILURE);
     }
+
+    printf("....inizializzando il Server....\n");
     const char* configurationFileName = argv[1];
 
     //prendo il file di configurazione
@@ -129,7 +131,7 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-   printf("inizializzato\n");
+   printf("........\n");
 
 ////////////////////////////////////////////////////////////
     sigset_t mask;

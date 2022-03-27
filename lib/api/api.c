@@ -32,13 +32,14 @@ int sendRequest(serverOperation op, int dim, const char* name, int flags) {
   if (writen(fdSkt, (int*)&dim, sizeof(int)) == -1) return -1;
 
   if (writen(fdSkt, &flags, sizeof(int)) == -1) return -1;
-  printf("sending request\n");
-  printf("inviato -> op=%d\tdim=%d flags=%d\n", op, dim, flags);
+  printf("...inviando una richiesta...\n");
+  //printf("inviato -> op=%d\tdim=%d flags=%d\n", op, dim, flags);
   if (name != NULL) {
     int len = strlen(name) + 1;
     if (writen(fdSkt, &len, sizeof(int)) == -1) return -1;
-    printf("tento di inviare stringa %s di len %d\n", name, len);
+    //printf("tento di inviare stringa %s di len %d\n", name, len);
     return writen(fdSkt, (void*)name, len);
+    printf("richiesta inviata\n");
   }
   return 0;
 }
@@ -48,33 +49,15 @@ int receiveResponse() {
   int err;
   err = readn(fdSkt, &res, sizeof(int));
   
-  CHECKERRE(err, -1, "Errore readn: ");
-  printf("ricevuto : %d\n", res);
+  PRINTERRS(err, -1, "Errore readn: ",-4);
+  //printf("ricevuto : %d\n", res);
   return res;
 }
-/*int sendRequest(Operation op, int dim, const char *name, int flags, int fd){
-    if (writen(fd, (int *)&op, sizeof(int)) == -1)
-      return -1;
-   printf("inviato : %d\n", op);
-
-   if (writen(fd, (int *)&dim, sizeof(int)) == -1)
-      return -1;
-   printf("inviato : %d\n", (int)dim);
-
-   if (writen(fd, &flags, sizeof(int)) == -1)
-      return -1;
-   printf("inviato : %d\n", flags);
-
-   size_t len = strlen(name) + 1;
-   if (writen(fd, (int *)&len, sizeof(int)) == -1)
-      return -1;
-   printf("inviato : %d\n", len);
-   return writen(fd, (void *)name, len * sizeof(char));
-}*/
 
 int sendFile(void* buffer, size_t n) {
-  printf("sending file");
+  printf("...inviando file...");
   return writen(fdSkt, buffer, n);
+  printf("file inviato");
 }
 
 int receiveAndSaveFile(const char* dirname) {
@@ -97,6 +80,7 @@ int receiveAndSaveFile(const char* dirname) {
     return -1;
   }
   name = malloc(nameLen);
+  PRINTERRSR(name, NULL, "Errore malloc:");
   res = readn(fdSkt, name, nameLen);
 
   
@@ -107,11 +91,8 @@ int receiveAndSaveFile(const char* dirname) {
     return -1;
   }
 
-  printf("PRE STAMPA\n");
-
-  printf("nome file ricevuto ora: %s\n", name);
-
   buffer = malloc(dim);
+  PRINTERRSR(buffer, NULL, "Errore malloc:");
   res = readn(fdSkt, buffer, dim);
   if (res == -1) {
     errno = ECOMM;
@@ -122,12 +103,13 @@ int receiveAndSaveFile(const char* dirname) {
     int pathLen = (strlen(dirname) + nameLen) * sizeof(char) + 1;
 
     char* path = malloc(pathLen);
+    PRINTERRSR(path, NULL, "Errore malloc:");
     strcpy(path, dirname);
-    //strcat(path, "/");
+  
     strcat(path, name);
     path[pathLen - 1] = '\0';
 
-    printf("PATH : %s\n", path);
+    //printf("PATH : %s\n", path);
 
     FILE* file = fopen(path, "w+");
     CHECKERRSC(file, NULL, "fopen failed");
@@ -152,7 +134,9 @@ int getFile(void** buffer, const char* fileName) {
   if (ifp == NULL) return -1;
 
   void* tmpBuff = malloc(NUM);
+  PRINTERRSR(tmpBuff, NULL, "Errore malloc:");
   *buffer = malloc(NUM);
+  PRINTERRSR(*buffer, NULL, "Errore malloc:");
   int justRead = 0;
   int bytesRead = 0;
   while (1) {
@@ -170,8 +154,7 @@ int getFile(void** buffer, const char* fileName) {
     bytesRead = bytesRead + justRead;
 
     if (feof(ifp)) {
-      // buffer = realloc((char*)buffer, bytesRead+1);
-      printf("byte letti da file %d\n", bytesRead);
+      //printf("byte letti da file %d\n", bytesRead);
       break;
     }
   }
@@ -188,9 +171,10 @@ successo, -1 in caso di fallimento, errno viene settato opportunamente.*/
 int openConnection(const char* sockname, int msec,const struct timespec abstime) {
   int res;
   struct timespec currSpec;
-  printf("name skt : %s\n", sockname);
+  printf("Apertura Connessione, soket: %s\n", sockname);
   if ((fdSkt = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) return -1;
   sock = malloc(strlen(sockname) * sizeof(char) + 1);
+  PRINTERRSR(sock, NULL, "Errore malloc:");
   strcpy(sock, sockname);
 
   strncpy(sa.sun_path, sock, strlen(sock) * sizeof(char) + 1);
@@ -198,9 +182,6 @@ int openConnection(const char* sockname, int msec,const struct timespec abstime)
 
   // connetto il client alla socket del server
   clock_gettime(CLOCK_REALTIME, &currSpec);
-
-  printf("fd skt : %d\n", fdSkt);
-
   int notElapsed = 1;
   errno = 0;
   // tento di nuovo la connessione fino allo scadere del timeout
@@ -208,27 +189,24 @@ int openConnection(const char* sockname, int msec,const struct timespec abstime)
          (notElapsed = ((currSpec.tv_sec < abstime.tv_sec) ||
                         ((currSpec.tv_sec == abstime.tv_sec) &&
                          (currSpec.tv_nsec < abstime.tv_nsec))))) {
-    printf("res connect : %d\n", res);
-    printf(" not Elapsed : %d \n", notElapsed);
+   
+    printf(".....Connessione.....\n");
     if (errno == ECONNREFUSED || errno == ENOENT) {
       // la socket non esiste
       //  aspetto msec millisecondi e
 
-      printf("Current time: %ld seconds \n", currSpec.tv_sec);
-      printf("Current time: %ld nanoseconds \n\n", currSpec.tv_nsec);
+   
 
       usleep(msec * 1000);
       clock_gettime(CLOCK_REALTIME, &currSpec);
 
     } else {
       // altro errore nella connessione
-      perror("connect failed");
+      perror("Errore Connect: ");
       exit(EXIT_FAILURE);
     }
   }
-  printf("esco dal while\n");
-  printf("res connect : %d\n", res);
-  printf(" not Elapsed : %d \n", notElapsed);
+ 
   if (notElapsed == 0) {
     // timeout scaduto
     // fprintf(stderr, "Timeout scaduto durante la connessione");
@@ -237,10 +215,10 @@ int openConnection(const char* sockname, int msec,const struct timespec abstime)
     exit(EXIT_FAILURE);
   }
 
-  printf("file descriptor %d \n", fdSkt);
 
   free(sock);
   // return fdSkt;
+  printf("Conneso al serever\n");
   return 0;
 }
 
@@ -321,10 +299,11 @@ int readFile(const char* pathname, void** buf, size_t* size) {
     return -1;
   }
   if (res > 0) {
-    printf("RES RICEVUTO = %d\n", res);
+    //printf("RES RICEVUTO = %d\n", res);
     *size = (size_t)res;
   
     *buf = malloc((size_t)res);
+    PRINTERRSR(*buf, NULL, "Errore malloc:");
     res = readn(fdSkt, *buf, (size_t)res);
   }
   if (res < 0) {
@@ -378,9 +357,7 @@ int writeFile(const char* pathname, const char* dirname) {
     errno = EINVAL;
     return -1;
   }
-  /*char* fileName = malloc(45);
 
-  strcpy(fileName,"/home/franc/Documents/ClientServer/prova.txt");*/
 
   void* buffer = NULL;
 
@@ -397,7 +374,7 @@ int writeFile(const char* pathname, const char* dirname) {
     return -1;
   }
   res = sendFile(buffer, bytesRead);
-  printf("file inviato byte letti %d  e res = %d\n", bytesRead, res);
+  //printf("file inviato byte letti %d  e res = %d\n", bytesRead, res);
   if (res == -1) {
     errno = ECOMM;
     return -1;
@@ -410,7 +387,7 @@ int writeFile(const char* pathname, const char* dirname) {
   // res in questo caso è il numero di file che invia
                             // il server
 
-  printf("numero FILE VITTIMA ricevuto %d\n",res);
+  //printf("numero FILE VITTIMA ricevuto %d\n",res);
 
   if (dirname != NULL) {
     for (int i = 0; i < res; i++) {
@@ -489,7 +466,7 @@ int closeFile(const char* pathname) {
     return -1;
   }
 
-  printf("invio richiesta close del file");
+  //printf("invio richiesta close del file");
 
   int res = sendRequest(CF, 0, pathname, 0);
   if (res == -1) {

@@ -51,8 +51,11 @@ size_t getList(const char* str, string** list){
          //printf("size of string %ld\n", strlen(subString));
         //printf("stringa letta : %s\n ", subString);
        string* f = malloc(sizeof(string));
+       PRINTERRSR(f, NULL, "Errore malloc:");
        //printf("size of string %ld\n\n", strlen(subString));
        f->name = malloc(strlen(subString)*sizeof(char)+1);
+       PRINTERRSR(f->name, NULL, "Errore malloc:");
+       
        strcpy(f->name,subString);
        f->nextString = NULL;
     
@@ -187,6 +190,7 @@ int main(int argc, char* const* argv){
             case 'w':{
                 
                 Request* req = malloc(sizeof(Request));
+                PRINTERRSR(req, NULL, "Errore malloc:");
                 
                 char* args = optarg;
                 req->op = Write;
@@ -210,6 +214,7 @@ int main(int argc, char* const* argv){
             case 'W':{
                 
                 Request* req = malloc(sizeof(Request));
+                PRINTERRSR(req, NULL, "Errore malloc:");
                 req->op = Write;
                 req->dirFrom = NULL;
                 req->dirTo = NULL;
@@ -225,8 +230,8 @@ int main(int argc, char* const* argv){
             case 'R':{
                 
                 Request* req = malloc(sizeof(Request));
+                PRINTERRSR(req, NULL, "Errore malloc:");
 
-                printf("caso R\n");
                 req->op = Read;
                 req->files = NULL;
                 req->filesNumber = 0;
@@ -255,13 +260,14 @@ int main(int argc, char* const* argv){
                 req->dirTo = NULL;
                 req->next = NULL;
 
-                printf("n parsed = %ld\n", req->n);
+                //printf("n parsed = %ld\n", req->n);
                 addRequest(&reqs, req);
                 break;
             }
             case 'r':{
                 
                 Request* req = malloc(sizeof(Request));
+                PRINTERRSR(req, NULL, "Errore malloc:");
                 req->op = Read;
                 req->dirTo = NULL;
                 req->dirFrom = NULL;
@@ -276,6 +282,7 @@ int main(int argc, char* const* argv){
             case 'l':{
                 
                 Request* req = malloc(sizeof(Request));
+                PRINTERRSR(req, NULL, "Errore malloc:");
                 req->op = Lock;
                 req->dirTo = NULL;
                 req->dirFrom = NULL;
@@ -290,6 +297,7 @@ int main(int argc, char* const* argv){
             case 'u':{
                 
                 Request* req = malloc(sizeof(Request));
+                PRINTERRSR(req, NULL, "Errore malloc:");
                 req->op = Unlock;
                 req->dirTo = NULL;
                 req->dirFrom = NULL;
@@ -304,6 +312,7 @@ int main(int argc, char* const* argv){
             case 'c':{
                 
                 Request* req = malloc(sizeof(Request));
+                PRINTERRSR(req, NULL, "Errore malloc:");
                 req->op = Cancel;
                 req->dirTo = NULL;
                 req->dirFrom = NULL;
@@ -353,7 +362,6 @@ int main(int argc, char* const* argv){
 
     while(aux!=NULL){
         printf("richiesta: %d\n", aux->op);
-        //printf("richiesta su : %s\n", aux->files->name);
 
         aux = aux->next;
         
@@ -364,9 +372,6 @@ int main(int argc, char* const* argv){
         // apro la connessione e prendo le richieste nella coda
         clock_gettime(CLOCK_REALTIME, &spec);
       spec.tv_sec  = spec.tv_sec + 10;   //tenterò la connessione per 10 secondi
-
-      printf("due time: %ld nanoseconds \n",spec.tv_nsec);
-      printf("due time: %ld seconds\n\n",spec.tv_sec);
       openConnection( serverSocket, msec, spec);
    //CONTROLLA ERRNO -1
         
@@ -381,14 +386,14 @@ int main(int argc, char* const* argv){
 
             case Write:{
 
-                string* prova = reqs->files;
+                /*string* prova = reqs->files;
 
                 while(prova != NULL){
                     printf("%s\n", prova->name);
                     prova = prova->nextString;
 
 
-                }
+                }*/
                 //posso avere n invece che il nome del file
                // CHECKERREC(reqs->files,NULL,"Richiesta writeFile malformata\n");
                 //CHECKERREC(reqs->files->name,NULL,"Richiesta writeFile malformata\n");
@@ -422,8 +427,6 @@ int main(int argc, char* const* argv){
 
             case Read:{
 
-                printf("Richiesta read\n");
-
                 aux_p = reqs->files;
               
                 if(reqs->files != NULL){
@@ -440,7 +443,7 @@ int main(int argc, char* const* argv){
                         printOp("Open", reqs->files->name,result,0);
                         }
                         result = readFile(aux_p->name, &buffer, &dim);
-                        printf("\n DIMENSIONE FILE %ld\n", dim);
+                        
                         if(filesReadNumber == FILECAPACITY){
                             printf("impossibile memorizzare altri file senza salvarlisul disco\n");
                         }
@@ -461,11 +464,12 @@ int main(int argc, char* const* argv){
                             int pathLen = (strlen(reqs->dirTo) + strlen(pName)) * sizeof(char) + 1;
 
                             char* path = malloc(pathLen);
+                            PRINTERRSR(path, NULL, "Errore malloc:");
                             strcpy(path, reqs->dirTo);
                             strcat(path, pName);
                             path[pathLen - 1] = '\0';
 
-                            printf("PATH : %s\n", path);
+                            //printf("PATH : %s\n", path);
 
                             FILE* file = fopen(path, "w+");
                             CHECKERRSC(file, NULL, "fopen failed");
@@ -499,6 +503,7 @@ int main(int argc, char* const* argv){
                          if(print){
                         printOp("Read N", reqs->files->name,result,0);
                         }
+                }
                     
 
             break;
@@ -569,7 +574,7 @@ int main(int argc, char* const* argv){
     }
 
     printf("Terminando Client....");
-    if (termination == 1) printf("client terminato in seguito ad errore \n");
+    //if (termination == 1) printf("client terminato in seguito ad errore \n");
     freeRequests(&reqs);
     for(int i = 0; i < filesReadNumber; i++){
         free(filesRead[i]);

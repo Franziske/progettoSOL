@@ -164,7 +164,6 @@ void printOp (const char*, char* f, int retvalue, int bytes);
      if(var != value){      \
          \
         fprintf(stderr, errString); \
-        exit(EXIT_FAILURE);      \
     }
 #define PRINTERR(var,value,errString)\
      if(var == value){      \
@@ -179,6 +178,19 @@ void printOp (const char*, char* f, int retvalue, int bytes);
         perror(errString); \
         termination = 1;\
         break;\
+     }
+#define PRINTERRS(var,value,errString,retValue)\
+     if(var == value){      \
+         \
+        perror(errString); \
+        if(retValue != 0) return retValue;\
+     }
+
+#define PRINTERRSR(var,value,errString)\
+     if(var == value){      \
+         \
+        perror(errString); \
+        exit(EXIT_FAILURE);\
      }
      
 

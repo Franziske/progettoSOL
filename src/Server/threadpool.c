@@ -6,23 +6,26 @@ int readRequest(int fd_c, ServerRequest *req) {
   void *name = NULL;
   int err;
   err = readn(fd_c, &op, sizeof(int));
-  CHECKERRE(err, -1, "readn op failed");
+  PRINTERRS(err, -1, "readn op failed",-1);
 
   // printf("readn = %d \n",readn(fd_c,&dim, sizeof(int)));
   err = readn(fd_c, &dim, sizeof(int));
-  CHECKERRE(err, -1, "readn dim failed");
+  PRINTERRS(err, -1, "readn dim failed",-1);
 
   err = readn(fd_c, &flags, sizeof(int));
-  CHECKERRE(err, -1, "readn flags failed");
+  PRINTERRS(err, -1, "readn flags failed",-1);
 
   err = readn(fd_c, &nameLen, sizeof(int));
 
   // printf(" risultato readn lunghezza nome : %d \n", nameLen);
-  CHECKERRE(err, -1, "readn name  failed");
-  if(nameLen > 0) name = malloc(nameLen);
+  PRINTERRS(err, -1, "readn name  failed",-1);
+  if(nameLen > 0){
+    name = malloc(nameLen);
+    PRINTERRSR(name, NULL, "Errore malloc:");
+  }
 
   err = readn(fd_c, name, nameLen);
-  CHECKERRE(err, -1, "readn failed");
+  PRINTERRS(err, -1, "readn failed",-1);
 
   printf("ricevuto -> op=%d\tdim=%d\tnameLen=%d\n", op, dim, nameLen);
   if (!op) {
@@ -118,6 +121,7 @@ int addToQueue(Threadpool *pool, int arg) {
   printf("sono nella add to queue \n");
 
   Client *fdReq = malloc(sizeof(Client));
+  PRINTERRSR(fdReq, NULL, "Errore malloc:");
   fdReq->fdC = arg;
   fdReq->nextC = NULL;
 
@@ -163,6 +167,7 @@ static void *workerFun(void *threadpool) {
     // leggo la richiesta fatta dal client c
     int fdC = c->fdC;
     ServerRequest *req = malloc(sizeof(ServerRequest));
+    PRINTERRSR(req, NULL, "Errore malloc:");
 
     // leggo la richiesta
     res = readRequest(fdC, req);
@@ -172,7 +177,7 @@ static void *workerFun(void *threadpool) {
         free(c);
         continue;
     }
-    // non deve terminare il server CHECKERRE(res, -1, "Errore readRequest: ");
+    // non deve terminare il server 
     req->client = fdC;
 
     switch (req->op) {
