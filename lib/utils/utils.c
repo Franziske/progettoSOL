@@ -31,7 +31,7 @@ int stringToInt(const char* s) {
 }*/
 
 void printOp (const char* op, char* f, int retvalue, int bytes){
-  printf("Operazione %s \n effettuata sul file:\n%s \n terminata con risultato: %d \n",op,f,retvalue);
+  printf("\nOperazione %s \n effettuata sul file:\n%s \n terminata con risultato: %d \n\n",op,f,retvalue);
    if(bytes > 0) printf("sono stati coivolti nell'operazione %d bytes", bytes);
 }
 
@@ -40,7 +40,7 @@ int sendResponse(int fd, int res) {
   err = writen(fd, &res, sizeof(int));
   //printf("inviato : %d\n", res);
   //CHECKERRE(err, -1, "Errore writen: ");
-  return res;
+  return err;
 }
 
 
@@ -172,7 +172,7 @@ int listFileInDir(char* dirName, int n, string** list) {
                 // file
                 if (curr->d_type != DT_DIR) {
                 addToList(list, f);
-                printf("file %s trovato\n");
+                printf("file %s trovato\n", f->name);
                 fileCount++;
                     if (n != 0 && fileCount == n) {
                         done = 1;

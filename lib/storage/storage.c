@@ -24,7 +24,7 @@ int lockToModify(File* f){
 }
 int unlockToModify(File* f){
   UNLOCKR(&(f->modifyMutex), -1);
-  printf("\nUNLOCK su %s\n\n", f->name);
+printf("\nUNLOCK su %s\n\n", f->name);
   return 0;
 }
 
@@ -129,7 +129,7 @@ File* findFile(char* nameF) {
 
     if (strncmp(aux->name, nameF, (ssize_t)strlen(nameF) + 1) == 0) {
      
-     if(aux != storageTail)UNLOCKR(&(storageMutex), -1);
+     if(aux != storageTail)UNLOCKR(&(storageMutex), NULL);
       return aux;
     
     }
@@ -319,6 +319,14 @@ File* FindVictims(int n, int fd, int* victimsCount) {
 
 int OpenInStorage(char* name, int dim, int flags, int fd) {
   LOCKR(&(storageMutex), -3);
+    printf("\nSTAMPO CONTENUTO STORAGE\n");
+  File* aux = storageHead;
+  while (aux !=NULL)
+  {
+      printf("%s \n", aux->name);
+      aux = aux->nextFile;
+  }
+  
   File* f = findFile(name);
   if(f != NULL) lockToModify(f);
   if(f != storageHead && f != storageTail)UNLOCKR(&(storageMutex), -3);
@@ -462,6 +470,7 @@ int CloseInStorage(char* name, int fd) {
     }
   
   }
+  unlockToModify(f);
   if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
   return res;
 
@@ -474,11 +483,11 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
 
   printf("dim = %d\n", dim);
 
-  printf("leggo il file\n");
+  printf("leggo il file...\n");
 
   int res = readn(fd, buff, dim);
 
-  printf("file letto  res = %d\n", res);
+  printf("file letto \n");
 
   //se la dimensione del file è maggiore della capacità dello storage
   if (dim > capacity) {
@@ -510,7 +519,7 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
 
     return -3;
   }
-  printf("Tutto bene lock=%d e fd=%d\n", f->lock, fd);
+  //printf("Tutto bene lock=%d e fd=%d\n", f->lock, fd);
 
   // il file è esplicitamente loccato da fd tramite il flag
 
@@ -544,8 +553,8 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
   currNFile ++;
   currMem = currMem + dim;
 
-   printf("ATTUALMENTE: %d MEMORIA\n%d FILE\n\n",currMem,currNFile);
-   printf("DIMENSIONE FILE %d \n", f->dim);
+   printf("\nATTUALMENTE: %d MEMORIA\n%d FILE\n\n",currMem,currNFile);
+   //printf("DIMENSIONE FILE %d \n", f->dim);
 
    printf("testa: %s \n coda:%s\n\n",storageHead->name,storageTail->name);
 
@@ -558,7 +567,7 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
 
   // invio al client il numero di file vittima
   int err;
-  printf("pre write \n");
+
   err = writen(fd, &victimsCount, sizeof(int));
 
   printf("file vittima %d\n", victimsCount);
@@ -607,7 +616,6 @@ int WriteInStorage(char* name, int dim, int flags, int fd) {
 int ReadFromStorage(char* name, int flags, int fd) {
   // controllo che il file esista
 
-  printf("sono nella read file \n");
   if (flags == -1) {
 
     LOCKR(&(storageMutex), -3);
@@ -633,7 +641,7 @@ int ReadFromStorage(char* name, int flags, int fd) {
 
  
     if (f->lock == -1) {
-      printf("pre invio file\n");
+      //printf("pre invio file\n");
       int res = sendFile(f, fd);
       unlockToModify(f);
       if(f == storageHead || f == storageTail)UNLOCKR(&(storageMutex), -3);
@@ -662,12 +670,14 @@ int ReadFromStorage(char* name, int flags, int fd) {
 
   //se mi sono stati richiesti n file:
 
-  if (flags == 0 || flags > currNFile)
+  if (flags == 0 || flags > currNFile){
     actualN = currNFile;
-
+    printf("n %d \n",flags);
+  }
   else {
     actualN = flags;
   }
+
 
   int availableCount = 0;
   File* aux = storageHead;
@@ -679,16 +689,12 @@ int ReadFromStorage(char* name, int flags, int fd) {
 
   actualN = availableCount;
 
-  printf("\t sto per inviare %d file", actualN);
-
 
   aux = storageHead;
-   printf("storage head name %s\n", aux->name);
+   printf("storage head: %s\n", aux->name);
 
   sendResponse(fd, actualN);
- 
 
-  printf("storage head name %s\n", aux->name);
 
   for (int i = 0; i < actualN; i++) {
    

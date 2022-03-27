@@ -219,15 +219,10 @@ int main(int argc, char const *argv[])
     while(termina <2) {
         // copio il set nella variabile temporanea per la select
         tmpset = set;
-
-        printf("fdmax prima della select = %d\n", fdmax);
        
         
         err = select(fdmax+1, &tmpset, NULL, NULL, NULL);
         CHECKERRSC(err,-1, "Errore select: ");
-
-        printf("postselect\n");
-        //int i=0;
 
         // cerchiamo di capire da quale fd abbiamo ricevuto una richiesta
         for(int i=0; i <= fdmax; i++) {
@@ -238,13 +233,13 @@ int main(int argc, char const *argv[])
             
             if (isset) {
                 int connfd;
-                printf("fd settato = %d \n", i);
+                //printf("fd settato = %d \n", i);
 
                 if (i == listenfd) { 
                     // e' una nuova richiesta di connessione 
                     connfd = accept(listenfd, (struct sockaddr*)NULL ,NULL);
                     CHECKERRSC(connfd, -1, "Errore accept");
-                    printf("ho ricevuto richiesta di connessione da fd: %d\n", connfd);
+                    printf("ricevuta richiesta di connessione, descrittore: %d\n", connfd);
                     FD_SET(connfd, &set); 
                     if(connfd > fdmax) fdmax = connfd;
 
@@ -279,7 +274,7 @@ int main(int argc, char const *argv[])
                     printf("\nterminando con sig: %d\n", termina);
                     terminationProtocol(pool, sig);
 
-                    printf("chiamato protocollo di terminazione\n");
+                    printf("Iniziato protocollo di terminazione....\n");
                     
                    // break;
                    continue;
@@ -287,7 +282,7 @@ int main(int argc, char const *argv[])
 
                 if (i == fds_pipe[0]) {
 
-                     printf("ricevuto fd da pipe %d \n", fds_pipe[0]);
+                 
                     // ricevuto sulla pipe un fd sul quale mi devo rimettere in ascolto 
                     int clientBack;
                     err = read(fds_pipe[0], &clientBack, sizeof(int));
@@ -301,14 +296,14 @@ int main(int argc, char const *argv[])
 
                         if(clientBack > fdmax) fdmax = clientBack;
 
-                    printf("Client con fd %d is back\n", clientBack);
+                    printf("Server di nuovo in ascolto sul descrittore del Client %d \n", clientBack);
                     continue;
                     }
                     
                     if(clientBack == -1){
 
                         printf("terminate le richieste in sospeso\n");
-                        printf("fd max = %d, fd max iniz = %d termina = %d\n", fdmax, initialFdmax, termina);
+                       
                         //sono terminate le richieste che erano in sospeso 
                         //se ho chiusura immediata breaK
                         if(termina != 1)break;
@@ -333,7 +328,7 @@ int main(int argc, char const *argv[])
                 }
 
 
-                printf("Ricevuta richiesta fd %d \n", i);
+                //printf("Ricevuta richiesta fd %d \n", i);
                 FD_CLR(i,&set);
                 if(fdmax == i){
                     int newMax = 0;
@@ -344,7 +339,7 @@ int main(int argc, char const *argv[])
                     fdmax = newMax;
                 }
                
-                printf("aggiungendo fd alle richieste %d\n", i);
+                printf("aggiungendo fd alla lista di chi ha richieste in sospeso %d\n", i);
                 int arg = i;
                 
                 int r =addToQueue(pool, arg);

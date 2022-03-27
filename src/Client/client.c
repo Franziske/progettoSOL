@@ -172,7 +172,7 @@ int main(int argc, char* const* argv){
                 // required
                 CHECKERREC(socketInzialized, 1, "Richiesta mal formata:-f duplicato");
                 serverSocket = optarg;
-                printf("server socket inizializzata: %s\n", serverSocket);
+                printf("server socket inizializzata\n");
                 socketInzialized = 1;
                 break;
             }
@@ -184,7 +184,7 @@ int main(int argc, char* const* argv){
                     return EXIT_FAILURE;
                 }
                 timeout = (size_t) t;
-                printf("timeout setted to: %ld millisec\n", timeout);
+                printf("timeout settato: %ld millisecondi\n", timeout);
                 break;
             }
             case 'w':{
@@ -221,7 +221,7 @@ int main(int argc, char* const* argv){
                 req->files = NULL;
                 //aggiorno il numero di file e la lista con i files
                 req->filesNumber = getList(optarg, &(req->files)); 
-                printf("req -> files number : %ld", req->filesNumber);
+                //printf("req -> files number : %ld\n", req->filesNumber);
                 req->n = 0;
                 req->next = NULL;
                 addRequest(&reqs, req);
@@ -242,9 +242,13 @@ int main(int argc, char* const* argv){
                 char* args = optarg;
                  if(args!= NULL){
                     char*parsedN = strtok_r(args, ",", &args);
-                    if (parsedN != NULL && parsedN[0] == '='){
-                    req->n = atoi(parsedN + 1);
+
+                    if (parsedN != NULL && parsedN[0] == 'n' && parsedN[1] == '='){
+                    req->n = atoi(parsedN + 2);
+                   
                     }
+
+                    
                     else{
                         fprintf(stderr, "richiestra read malformata ");
                         exit(EXIT_FAILURE);
@@ -400,6 +404,7 @@ int main(int argc, char* const* argv){
             
                 result = 0;
                 aux_p = reqs->files;
+                printf("\nnumero file nella req %d\n\n", reqs->filesNumber);
                 for (size_t i = 0; i < reqs->filesNumber; i++){  
                     
                     int flags = 3;
@@ -475,6 +480,7 @@ int main(int argc, char* const* argv){
                             CHECKERRSC(file, NULL, "fopen failed");
 
                             fwrite(buffer, 1, dim, file);
+                            CHECKERRSC(file, NULL, "fwrite failed");
 
                             fclose(file);
 
@@ -501,7 +507,7 @@ int main(int argc, char* const* argv){
                         result = readNFiles(reqs->n, reqs->dirTo);
                          PRINTERRSC(result, -1, "Errore readNFile: ",termination);
                          if(print){
-                        printOp("Read N", reqs->files->name,result,0);
+                         printf("Operazione ReadN \n effettuata su %d file\n terminata con risultato: %d \n Files salvati in %s\n\n",reqs->n,result, reqs->dirTo);
                         }
                 }
                     

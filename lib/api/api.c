@@ -55,9 +55,9 @@ int receiveResponse() {
 }
 
 int sendFile(void* buffer, size_t n) {
-  printf("...inviando file...");
+  printf("...inviando file...\n");
   return writen(fdSkt, buffer, n);
-  printf("file inviato");
+  printf("file inviato\n\n");
 }
 
 int receiveAndSaveFile(const char* dirname) {
@@ -74,14 +74,18 @@ int receiveAndSaveFile(const char* dirname) {
     return -1;
   }
 
+
   dim = receiveResponse();
   if (dim < -1) {
     errno = ECOMM;
     return -1;
   }
+
   name = malloc(nameLen);
   PRINTERRSR(name, NULL, "Errore malloc:");
   res = readn(fdSkt, name, nameLen);
+
+  printf("file name %s\n");
 
   
   if (res == -1) {
@@ -332,7 +336,9 @@ int readNFiles(int N, const char* dirname) {
     errno = ECOMM;
     return -1;
   }
+  printf("n richiesto %d\n", N);
   res = receiveResponse();  
+  printf("riceverò %d file \n", res);
   SETERRNO(res);
     if(res < 0) return -1;
   // res in questo caso è il numero di file che invia il server
@@ -400,16 +406,6 @@ int writeFile(const char* pathname, const char* dirname) {
   return 0;
 }
 
-/*Richiesta di scrivere in append al file ‘pathname‘ i ‘size‘ bytes contenuti
-nel buffer ‘buf’. L’operazione di append nel file è garantita essere atomica dal
-file server. Se ‘dirname’ è diverso da NULL, il file eventualmente spedito dal
-server perchè espulso dalla cache per far posto ai nuovi dati di ‘pathname’
-dovrà essere scritto in ‘dirname’;
-Ritorna 0 in caso di successo, -1 in caso di fallimento, errno viene settato
-opportunamente.*/
-/*int appendToFile(const char* pathname, void* buf, size_t size, const char*
-dirname){ return -1;
-}*/
 
 /*In caso di successo setta il flag O_LOCK al file. Se il file era stato
 aperto/creato con il flag O_LOCK e la richiesta proviene dallo stesso processo,

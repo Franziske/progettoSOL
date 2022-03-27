@@ -141,7 +141,7 @@ void printOp (const char*, char* f, int retvalue, int bytes);
 #define CHECKERRSC(var, value, errString) \
     if(var == value){      \
          \
-        perror(errString); \   
+        perror(errString);\
     }
 
 
@@ -163,39 +163,39 @@ void printOp (const char*, char* f, int retvalue, int bytes);
 #define CHECKERRNE(var,value,errString)\
      if(var != value){      \
          \
-        fprintf(stderr, errString); \
+        fprintf(stderr, errString);\
     }
 #define PRINTERR(var,value,errString)\
-     if(var == value){      \
+     if(var == value){\
          \
-        fprintf(stderr, errString); \
+        fprintf(stderr, errString);\
          \
     }
 
 #define PRINTERRSC(var,value,errString, termination)\
-     if(var == value){      \
+     if(var == value){\
          \
-        perror(errString); \
+        perror(errString);\
         termination = 1;\
         break;\
      }
 #define PRINTERRS(var,value,errString,retValue)\
-     if(var == value){      \
+     if(var == value){\
          \
         perror(errString); \
         if(retValue != 0) return retValue;\
      }
 
 #define PRINTERRSR(var,value,errString)\
-     if(var == value){      \
+     if(var == value){\
          \
-        perror(errString); \
+        perror(errString);\
         exit(EXIT_FAILURE);\
      }
      
 
 #define TIMEOUT(t)\
-     if(t > 0) usleep(t * 1000);  \
+     if(t > 0) usleep(t * 1000);\
 
 #define SETERRNO(val)\
     switch (val){\
@@ -232,7 +232,6 @@ void printOp (const char*, char* f, int retvalue, int bytes);
   }   
 #define LOCKR(l, r)  if (pthread_mutex_lock(l)!=0)        {	\
     fprintf(stderr, "ERRORE FATALE lock\n");				\
-    printf("effettuata lock\n"); \
     return r;								\
   }   
 

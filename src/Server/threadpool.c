@@ -55,16 +55,14 @@ Client *getRequest(Threadpool *pool) {
   while ((pool->queue) == NULL) {
     // se ho finito le richieste in sospeso e devo terminare
     // invio il segnale per il server sulla pipe e restituisco null al worker
-    printf("sigterm %d \n", pool->termSig);
+    //printf("sigterm %d \n", pool->termSig);
 
     if (pool->termSig == 2 || pool->termSig == 3) {
         if (pthread_cond_broadcast(&(pool->cond)) != 0) {
     pthread_mutex_unlock(&(pool->lock));
     errno = EFAULT;
-    return -1;
+    return NULL;
   }
-
-  printf("post broadcast\n");
 
       pthread_mutex_unlock(&(pool->lock));
 
@@ -72,20 +70,18 @@ Client *getRequest(Threadpool *pool) {
       write(pool->fdsPipe, &endOfReqSig, sizeof(int));
 
       printf("Un thread è terminato \n");
-      return 0;
+      return NULL;
     }
 
 
-    printf("sigterm %d \n", pool->termSig);
+    //printf("sigterm %d \n", pool->termSig);
 
     if (pool->termSig == 1) {
       if (pthread_cond_broadcast(&(pool->cond)) != 0) {
       pthread_mutex_unlock(&(pool->lock));
       errno = EFAULT;
-      return -1;
+      return NULL;
      }
-
-  printf("post broadcast\n");
 
       pthread_mutex_unlock(&(pool->lock));
       int endOfReqSig = -1;
@@ -118,7 +114,6 @@ int addToQueue(Threadpool *pool, int arg) {
     errno = EINVAL;
     return -1;
   }
-  printf("sono nella add to queue \n");
 
   Client *fdReq = malloc(sizeof(Client));
   PRINTERRSR(fdReq, NULL, "Errore malloc:");
@@ -147,7 +142,7 @@ int addToQueue(Threadpool *pool, int arg) {
   pthread_mutex_unlock(&(pool->lock));
   // UNLOCK_RETURN(&(pool->lock), -1);
 
-  printf("ritorno dalla add to queue\n");
+
   return 0;
 }
 
@@ -162,7 +157,7 @@ static void *workerFun(void *threadpool) {
     closeConn = 0;
     Client *c = getRequest(pool);
     if (c == NULL)
-      // la coda è vuota e devo terminare
+      // la coda è vuota 
       break;
     // leggo la richiesta fatta dal client c
     int fdC = c->fdC;
@@ -182,7 +177,6 @@ static void *workerFun(void *threadpool) {
 
     switch (req->op) {
       case OF: {
-        printf("richiesta open\n");
         res = OpenInStorage(req->fileName, req->dim, req->flags, req->client);
         // controlla errori send
         sendResponse(fdC, res);
@@ -205,21 +199,21 @@ static void *workerFun(void *threadpool) {
       }
       case W: {
         res = WriteInStorage(req->fileName, req->dim, req->flags, req->client);
-        printf("risultato Write in storage: %d\n", res);
+        //printf("risultato Write in storage: %d\n", res);
         int r = write(pool->fdsPipe, &fdC, sizeof(int));
         free(req->fileName);
         break;
       }
       case R: {
-        printf("richiesta di leggere dallo storage con %d FLAGS \n", req->flags);
+        //printf("richiesta di leggere dallo storage con %d FLAGS \n", req->flags);
         res = ReadFromStorage(req->fileName, req->flags, req->client);
-        printf("risultato di read da storage %d\n", res);
+        //printf("risultato di read da storage %d\n", res);
         int r = write(pool->fdsPipe, &fdC, sizeof(int));
         free(req->fileName);
         break;
       }
       case L: {
-        printf("Ho ricevuto una lock\n");
+        //printf("Ho ricevuto una lock\n");
         res = LockInStorage(req->fileName, req->client);
         if (res != 1) {  // la richiesta è terminata o a buon fine o no
 
@@ -355,8 +349,6 @@ int destroyThreadPool(Threadpool *pool) {
     errno = EFAULT;
     return -1;
   }
-
-  printf("post broadcast\n");
   pthread_mutex_unlock(&(pool->lock));
 
   for (int i = 0; i < pool->nWorker; i++) {
